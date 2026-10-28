@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2448a8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Holerite">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Calculadora de Holerite pelo Ponto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: coluna única no celular; no desktop, entradas à esquerda e holerite calculado fixo à direita */
+:root{
+  --bg:#eef1f4; --card:#ffffff; --ink:#17202b; --muted:#5b6675; --line:#d8dee6;
+  --accent:#2448a8; --accent-soft:#e3e9fa; --money:#17794a;
+  --ok:#17794a; --ok-bg:#e2f3e9; --warn:#9a6400; --warn-bg:#fbf0d9; --crit:#b42318; --crit-bg:#fbe4e1;
+  --f-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#10151c; --card:#18202a; --ink:#e7ecf2; --muted:#9aa6b5; --line:#2b3644;
+  --accent:#8fa9ff; --accent-soft:#1f2a46; --money:#5fd39a;
+  --ok:#5fd39a; --ok-bg:#163326; --warn:#f2c066; --warn-bg:#3a2e14; --crit:#ff8a7d; --crit-bg:#3d1c1a; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#10151c; --card:#18202a; --ink:#e7ecf2; --muted:#9aa6b5; --line:#2b3644;
+  --accent:#8fa9ff; --accent-soft:#1f2a46; --money:#5fd39a;
+  --ok:#5fd39a; --ok-bg:#163326; --warn:#f2c066; --warn-bg:#3a2e14; --crit:#ff8a7d; --crit-bg:#3d1c1a; color-scheme:dark; }
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding:20px 16px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:18px}
+header h1{font:800 clamp(24px,5vw,34px)/1.1 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.grid{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+.col,.card{min-width:0}
+.drop .st{overflow-wrap:anywhere}
+.fields{align-items:start}
+@media(min-width:960px){.grid{grid-template-columns:minmax(0,1fr) 420px;align-items:start}.side{position:sticky;top:16px}}
+.col{display:grid;gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card h2{font:700 17px/1.2 var(--f-display);margin:0 0 4px;display:flex;align-items:center;gap:10px}
+.card h2 .n{font:500 12px var(--f-mono);color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px}
+.card .sub{color:var(--muted);font-size:13.5px;margin:0 0 14px}
+.drops{display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:560px){.drops{grid-template-columns:1fr 1fr}}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:14px;display:grid;gap:6px;cursor:pointer;position:relative;transition:border-color .15s}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop b{font:600 14px var(--f-body)}
+.drop span{font-size:13px;color:var(--muted)}
+.drop .st{font:500 12.5px var(--f-mono)}
+.who{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 12.5px var(--f-body);padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.crit{background:var(--crit-bg);color:var(--crit)}
+.fields{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.f{display:grid;gap:4px}
+.f label{font-size:12.5px;color:var(--muted);font-weight:500}
+.f input,.f select{font:500 15px var(--f-mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;font-variant-numeric:tabular-nums}
+.f input:focus,.f select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.f small{font-size:12px;color:var(--muted)}
+.f.hl input{border-color:var(--accent);background:var(--accent-soft)}
+fieldset{border:0;padding:0;margin:0 0 14px}
+legend{font:600 13px var(--f-body);color:var(--ink);padding:0;margin-bottom:8px}
+.btn{font:600 14px var(--f-body);border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--card)}
+.btn.primary:hover{filter:brightness(1.1);color:var(--card)}
+.btn.sm{font-size:13px;padding:5px 10px}
+.btn.danger{color:var(--crit)}
+.st-save{font-size:13px;color:var(--muted)}
+.hgroup{border-top:1px solid var(--line);padding:10px 0}
+.hgroup:first-child{border-top:0;padding-top:0}
+.hgroup h3{font:600 14.5px var(--f-body);margin:0 0 6px}
+.hrow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 0}
+.hrow .m{font:500 13.5px var(--f-mono)}
+.hrow .v{font:500 14px var(--f-mono);font-variant-numeric:tabular-nums}
+.hrow .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.hrow .info{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.empty{color:var(--muted);font-size:14px;margin:0}
+.full{max-width:1180px;margin:0 auto;width:100%}
+.ana{display:grid;gap:22px}
+.ana h3{font:700 16px/1.25 var(--f-display);margin:0 0 8px;display:flex;gap:8px;align-items:baseline}
+.ana h3 small{font:500 12px var(--f-mono);color:var(--accent)}
+.ana p,.ana li{max-width:78ch}
+.ana ul{margin:0;padding-left:18px;display:grid;gap:6px}
+.ana li{font-size:14.5px}
+.ana .calc{font-family:var(--f-mono);font-size:13px;color:var(--muted);display:block;margin-top:2px;overflow-wrap:anywhere}
+.ana .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.ana .kpis div{background:var(--bg);border-radius:8px;padding:10px 12px}
+.ana .kpis span{display:block;font-size:12px;color:var(--muted)}
+.ana .kpis b{font:600 18px var(--f-mono);font-variant-numeric:tabular-nums}
+.ana .sev{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--muted)}
+.ana .sev.crit{background:var(--crit)}.ana .sev.warn{background:var(--warn)}.ana .sev.ok{background:var(--ok)}
+.map td select{font:500 13px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;max-width:100%}
+.map td{font-size:13px}
+.modelo-tag{font:500 12px var(--f-mono);color:var(--muted)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.liq{display:grid;gap:2px;padding:4px 0 14px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.liq .lab{font-size:13px;color:var(--muted)}
+.liq .val{font:800 38px/1.05 var(--f-display);color:var(--money);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.liq .cmp{font-size:13px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font:600 11.5px var(--f-body);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;padding:6px 6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-size:13.5px;white-space:nowrap}
+tr.tot td{font-weight:600;border-bottom:0}
+td.desc{color:var(--crit)}
+.scroll{overflow-x:auto;margin:0 -6px}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.mini div{background:var(--bg);border-radius:8px;padding:8px 10px}
+.mini span{display:block;font-size:12px;color:var(--muted)}
+.mini b{font:500 15px var(--f-mono)}
+.alerts{display:grid;gap:10px}
+.al{border-left:4px solid var(--line);background:var(--bg);border-radius:0 8px 8px 0;padding:10px 12px}
+.al.crit{border-color:var(--crit)}.al.warn{border-color:var(--warn)}.al.ok{border-color:var(--ok)}
+.al b{display:block;font-size:14px}
+.al p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.days td{font-size:13px}
+.days td.n{font-size:12.5px}
+.days tr.off td:first-child{color:var(--accent)}
+.tag{font:500 11px var(--f-body);padding:1px 6px;border-radius:5px;margin-left:4px;white-space:nowrap}
+.tag.crit{background:var(--crit-bg);color:var(--crit)}.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.diff-ok{color:var(--ok)}.diff-bad{color:var(--crit)}.diff-warn{color:var(--warn)}
+.note{font-size:12.5px;color:var(--muted);margin:12px 0 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.inst{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.inst div{display:grid;gap:2px}.inst b{font-size:14.5px}.inst span{font-size:13px;color:var(--muted)}
+.inst[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div id="instalar" class="inst" hidden>
+      <div><b>Instale o app no celular</b><span id="instTxt">Abre como aplicativo, com ícone na tela inicial, e funciona sem internet.</span></div>
+      <button class="btn primary" id="btnInstalar" type="button">Instalar</button>
+    </div>
+    <h1>Calculadora de Holerite pelo Ponto</h1>
+    <p>Anexe o relatório de ponto (PDF) para calcular quanto vai receber. Anexe também o holerite para conferir se o valor pago está certo. Funciona para qualquer funcionário. Os arquivos são lidos só no seu navegador.</p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="card" aria-labelledby="h-arq">
+        <h2 id="h-arq"><span class="n">1</span>Arquivos do funcionário</h2>
+        <p class="sub">O ponto é obrigatório. O holerite é opcional e serve para comparar com o que foi pago.</p>
+        <div class="drops">
+          <div class="drop" id="dropPonto">
+            <input type="file" id="filePonto" accept="application/pdf" aria-label="Anexar ponto em PDF">
+            <b>Ponto (PDF)</b>
+            <span>Relatório ou espelho de ponto, de qualquer sistema</span>
+            <span class="st" id="stPonto">Exemplo carregado (09/2026)</span>
+          </div>
+          <div class="drop" id="dropHol">
+            <input type="file" id="fileHol" accept="application/pdf" aria-label="Anexar holerite em PDF">
+            <b>Holerite (PDF)</b>
+            <span>Qualquer modelo. Atualiza o salário e confere o pagamento</span>
+            <span class="st" id="stHol">Nenhum holerite</span>
+          </div>
+        </div>
+        <div class="who" id="who"></div>
+        <div class="fields" style="margin-top:12px"><div class="f" style="grid-column:1/-1"><label for="nome">Nome do funcionário</label><input id="nome" autocomplete="off" placeholder="Preenchido pelo PDF ou digite"></div></div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="btnSalvar" type="button">Salvar consulta</button>
+          <button class="btn" id="btnNovo" type="button">Novo funcionário</button>
+          <span class="st-save" id="stSave" role="status"></span>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h-sal">
+        <h2 id="h-sal"><span class="n">2</span>Salário e descontos</h2>
+        <p class="sub">O salário vem do holerite quando você anexa um. Também dá para digitar o salário novo ou aplicar um reajuste.</p>
+        <div class="fields">
+          <div class="f hl"><label for="salario">Salário mensal (R$)</label><input id="salario" inputmode="decimal" value="3.250,00"><small id="salOrig"></small></div>
+          <div class="f"><label for="reaj">Reajuste (%)</label><input id="reaj" inputmode="decimal" value="0"><small id="salNovo"></small></div>
+          <div class="f"><label for="divisor">Divisor de horas</label><input id="divisor" inputmode="numeric" value="220"><small>220 = 44h/semana</small></div>
+          <div class="f"><label for="dep">Dependentes (IR)</label><input id="dep" inputmode="numeric" value="0"></div>
+          <div class="f"><label for="vt">Vale-transporte (%)</label><input id="vt" inputmode="decimal" value="0"><small>Máx. 6% do salário</small></div>
+          <div class="f"><label for="adiant">Adiantamento (R$)</label><input id="adiant" inputmode="decimal" value="0,00"></div>
+          <div class="f"><label for="outProv">Outros proventos (R$)</label><input id="outProv" inputmode="decimal" value="0,00"></div>
+          <div class="f"><label for="outDesc">Outros descontos (R$)</label><input id="outDesc" inputmode="decimal" value="0,00"></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h-hor">
+        <h2 id="h-hor"><span class="n">3</span>Horas do ponto</h2>
+        <p class="sub" id="horSub">Preenchidas com os totais do relatório. Pode corrigir à mão (formato HH:MM).</p>
+        <fieldset><legend>Horas extras</legend>
+        <div class="fields">
+          <div class="f"><label for="he1">Hora extra (dia útil)</label><input id="he1" value="14:46"></div>
+          <div class="f"><label for="he1p">Adicional (%)</label><input id="he1p" inputmode="numeric" value="100"></div>
+          <div class="f"><label for="he2">Hora extra (2ª faixa)</label><input id="he2" value="00:00"></div>
+          <div class="f"><label for="he2p">Adicional (%)</label><input id="he2p" inputmode="numeric" value="50"></div>
+          <div class="f"><label for="folga">Folga / feriado trabalhado</label><input id="folga" value="18:35"></div>
+          <div class="f"><label for="folgap">Adicional (%)</label><input id="folgap" inputmode="numeric" value="100"></div>
+          <div class="f"><label for="night">Extra noturna (após 22h)</label><input id="night" value="01:40"></div>
+          <div class="f"><label for="nightp">Adicional extra (%)</label><input id="nightp" inputmode="numeric" value="100"></div>
+          <div class="f"><label for="adnot">Adicional noturno (%)</label><input id="adnot" inputmode="numeric" value="20"><small>Hora noturna de 52min30s</small></div>
+          <div class="f"><label for="faltas">Faltas/atrasos a descontar</label><input id="faltas" value="00:00"></div>
+        </div></fieldset>
+        <fieldset><legend>Mês de pagamento (para o DSR)</legend>
+        <div class="fields">
+          <div class="f"><label for="mes">Mês</label><input id="mes" type="month" value="2026-09"></div>
+          <div class="f"><label for="uteis">Dias úteis</label><input id="uteis" inputmode="numeric" value="25"></div>
+          <div class="f"><label for="dsr">Domingos + feriados</label><input id="dsr" inputmode="numeric" value="5"><small id="ferInfo"></small></div>
+        </div></fieldset>
+      </section>
+
+      <section class="card" aria-labelledby="h-aud">
+        <h2 id="h-aud"><span class="n">4</span>Avaliação do ponto</h2>
+        <p class="sub">Pontos que podem gerar direito a mais (intervalo, jornada, descanso entre turnos).</p>
+        <div class="alerts" id="alerts"></div>
+        <h2 style="margin-top:18px;font-size:15px">Dia a dia</h2>
+        <div class="scroll"><table class="days" id="days"></table></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-mod">
+        <h2 id="h-mod"><span class="n">5</span>Leitura dos PDFs</h2>
+        <p class="sub">A página reconhece o modelo usado aqui e lê outros modelos de ponto e holerite pelos títulos das colunas. Se algo foi lido errado, corrija abaixo. A correção fica guardada e vale para os próximos PDFs do mesmo modelo.</p>
+        <div id="modPonto"></div>
+        <div id="modHol" style="margin-top:16px"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-hist">
+        <h2 id="h-hist"><span class="n">6</span>Consultas salvas</h2>
+        <p class="sub">Cada funcionário tem uma consulta por mês. Salvar de novo o mesmo mês substitui a anterior. Fica guardado neste navegador.</p>
+        <div class="fields" style="margin-bottom:12px">
+          <div class="f"><label for="fNome">Buscar funcionário</label><input id="fNome" autocomplete="off" placeholder="Nome"></div>
+          <div class="f"><label for="fMes">Mês</label><select id="fMes"><option value="">Todos</option></select></div>
+        </div>
+        <div id="hist"></div>
+      </section>
+    </div>
+
+    <aside class="col side">
+      <section class="card" aria-labelledby="h-res">
+        <h2 id="h-res">Holerite calculado</h2>
+        <p class="sub" id="resSub">Período 09/2026</p>
+        <div class="liq"><span class="lab">Você vai receber (líquido)</span><span class="val" id="liq">R$ 0,00</span><span class="cmp" id="liqCmp"></span></div>
+        <div class="scroll"><table id="tbl"></table></div>
+        <div class="mini" id="mini"></div>
+      </section>
+      <section class="card" id="cmpCard" aria-labelledby="h-cmp" hidden>
+        <h2 id="h-cmp">Conferência com o holerite</h2>
+        <p class="sub">Compara o que foi pago com o que o ponto indica.</p>
+        <div class="scroll"><table id="cmp"></table></div>
+        <p class="note" id="cmpNote"></p>
+      </section>
+      <section class="card" aria-labelledby="h-tab">
+        <h2 id="h-tab">Tabelas usadas</h2>
+        <p class="sub" id="tabSub"></p>
+        <div id="tabWarn"></div>
+        <div class="scroll"><table id="tabInss"></table></div>
+        <div class="scroll" style="margin-top:12px"><table id="tabIr"></table></div>
+        <p class="note" id="tabNote"></p>
+      </section>
+      <p class="note" style="margin:0">Hora = salário ÷ divisor. DSR = extras ÷ dias úteis × domingos e feriados. É uma estimativa: a convenção coletiva da categoria pode ter regras próprias.</p>
+    </aside>
+  </div>
+
+  <section class="card full" aria-labelledby="h-ana">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="h-ana" style="margin:0"><span class="n">7</span>Análise detalhada</h2>
+      <div class="row"><button class="btn sm" id="btnCopiar" type="button">Copiar análise</button><span class="st-save" id="stCopiar" role="status"></span></div>
+    </div>
+    <p class="sub" style="margin-top:6px">Gerada com os dados acima. Atualiza sozinha quando você muda um campo ou anexa outro PDF.</p>
+    <div class="ana" id="ana"></div>
+  </section>
+</div>
+
+<script src="pdf.min.js"></script>
+<script>window.PDF_WORKER_LOCAL = new URL("pdf.worker.min.js", location.href).href;</script>
+<script>
+// ===== Núcleo: leitura do ponto + cálculo da folha (2026) =====
+const toMin = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
+const fmtH = m => { const s = m < 0 ? '-' : ''; m = Math.abs(Math.round(m)); return s + String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+
+// Recebe a lista de strings na ordem do PDF (pdf.js getTextContent)
+function parsePonto(strs) {
+  const days = [];
+  let cur = null, summaryMode = false;
+  const summary = [];
+  const totals = {};
+  const reDate = /^(\d{2})\/(\d{2})\/(\d{4})\s+(seg|ter|qua|qui|sex|s[áa]b|dom)\b(.*)$/i;
+  const reMarks = /^(\d{2}:\d{2}-\d{2}:\d{2}\s*)+$/;
+  const reSched = /^\d{2}:\d{2}\s+-\s+\d{2}:\d{2}(\s*\|\s*\d{2}:\d{2}\s+-\s+\d{2}:\d{2})*$/;
+  let nome = '';
+  for (let i = 0; i < strs.length; i++) {
+    const s = (strs[i] || '').trim();
+    if (!s) continue;
+    if (s === 'Nome:') { let j = i + 1; while (j < strs.length && !(strs[j] || '').trim()) j++; nome = (strs[j] || '').trim(); }
+    if (/^Totais:?$/.test(s)) { cur = null; continue; }
+    if (/^Totais horas extras por percentual/i.test(s)) { summaryMode = true; continue; }
+    const mSum = s.match(/^(\d{1,3}:\d{2})\s*-\s*(.+)$/);
+    if (summaryMode && mSum) { summary.push({ min: toMin(mSum[1]), label: mSum[2].trim() }); continue; }
+    if (summaryMode && !mSum && summary.length) summaryMode = false;
+    const kv = s.match(/^(Faltas|Atrasos|DSR|Dias trabalhados):$/i);
+    if (kv) { let j = i + 1; while (j < strs.length && !(strs[j] || '').trim()) j++; const v = (strs[j] || '').trim(); if (/^\d+(:\d{2})?$/.test(v)) totals[kv[1].toLowerCase()] = v; continue; }
+    const md = s.match(reDate);
+    if (md) {
+      cur = { date: `${md[1]}/${md[2]}`, d: +md[1], m: +md[2], y: +md[3], wd: md[4].toLowerCase().replace('sab', 'sáb'),
+              feriado: /feriado/i.test(md[5]), rest: false, sched: 0, marks: [] };
+      days.push(cur); continue;
+    }
+    if (!cur) continue;
+    if (/Descanso|Folga|Compensado/i.test(s) && !cur.marks.length) { cur.rest = true; continue; }
+    if (/^Feriado$/i.test(s)) { cur.feriado = true; cur.rest = true; continue; }
+    if (reSched.test(s) && !cur.sched) {
+      cur.sched = s.split('|').map(p => { const [a, b] = p.split('-').map(x => toMin(x.trim())); return b - a; }).reduce((x, y) => x + y, 0);
+      continue;
+    }
+    if (reMarks.test(s)) {
+      s.split(/\s+/).forEach(p => { const [a, b] = p.split('-'); cur.marks.push([toMin(a), toMin(b)]); });
+    }
+  }
+  // análise diária
+  for (const d of days) {
+    let worked = 0, night = 0;
+    for (let [a, b] of d.marks) {
+      if (b < a) b += 1440;
+      worked += b - a;
+      // noturno 22h–05h
+      const ov = (s, e) => Math.max(0, Math.min(b, e) - Math.max(a, s));
+      night += ov(1320, 1740) + ov(0, 300);
+    }
+    d.worked = worked; d.night = night;
+    const isOff = d.rest || d.feriado || !d.sched;
+    d.off = isOff;
+    if (isOff) { d.folga = worked; d.he = 0; d.deficit = 0; }
+    else { d.folga = 0; d.he = Math.max(0, worked - d.sched); d.deficit = Math.max(0, d.sched - worked); }
+    d.interval = d.marks.length > 1 ? d.marks.slice(1).reduce((acc, m, k) => acc + (m[0] - d.marks[k][1]), 0) : (d.marks.length ? 0 : null);
+  }
+  // totais calculados (a parte noturna sai da HE e da folga, como faz o relógio de ponto)
+  let he = 0, folga = 0, night = 0, deficit = 0;
+  for (const d of days) {
+    if (d.off) { folga += d.folga; }
+    else { const n = Math.min(d.night, d.he); he += d.he - n; night += n; }
+    deficit += d.deficit;
+  }
+  // período de pagamento = mês do último dia do ponto
+  const last = days[days.length - 1];
+  const res = { nome, days, computed: { he, folga, night, deficit }, summary, totals,
+    payMonth: last ? last.m : null, payYear: last ? last.y : null };
+  // totais oficiais do relatório, se existirem
+  if (summary.length) {
+    const off = { heGroups: {}, folga: 0, night: 0, nightPct: 100 };
+    for (const it of summary) {
+      const pct = (it.label.match(/(\d+)\s*%/) || [])[1];
+      if (/folga|descanso|feriado|dsr/i.test(it.label)) off.folga += it.min;
+      else if (/noturn/i.test(it.label)) { off.night += it.min; if (pct) off.nightPct = +pct; }
+      else { const p = pct ? +pct : 50; off.heGroups[p] = (off.heGroups[p] || 0) + it.min; }
+    }
+    res.official = off;
+  }
+  return res;
+}
+
+// Calendário: domingos + feriados nacionais do mês
+function easter(y) { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451); const mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1; return new Date(y, mo - 1, da); }
+function feriadosNacionais(y) {
+  const f = ['01-01', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '11-20', '12-25'].map(s => { const [m, d] = s.split('-'); return new Date(y, m - 1, +d); });
+  const e = easter(y); f.push(new Date(y, e.getMonth(), e.getDate() - 2)); // Sexta-feira Santa
+  return f;
+}
+function calendario(y, m, extraFeriados = 0) {
+  const n = new Date(y, m, 0).getDate();
+  const fer = feriadosNacionais(y).filter(d => d.getMonth() === m - 1 && d.getDay() !== 0).map(d => d.getDate());
+  let dom = 0; for (let d = 1; d <= n; d++) if (new Date(y, m - 1, d).getDay() === 0) dom++;
+  const dsr = dom + fer.length + extraFeriados;
+  return { dias: n, domingos: dom, feriados: fer, dsr, uteis: n - dsr };
+}
+
+// Tabelas oficiais por ano. Bloco entre os marcadores é atualizado pela verificação mensal.
+const TABELAS = /*TABELAS_INICIO*/{
+  "2026": {
+    "inss": [[1621.00, 0.075], [2902.84, 0.09], [4354.27, 0.12], [8475.55, 0.14]],
+    "ir": [[2428.80, 0, 0], [2826.65, 0.075, 182.16], [3751.05, 0.15, 394.16], [4664.68, 0.225, 675.49], [null, 0.275, 908.73]],
+    "irDependente": 189.59,
+    "irDescontoSimplificado": 607.20,
+    "irRedutor": { "isentoAte": 5000.00, "reducaoMax": 312.89, "faixaAte": 7350.00, "a": 978.62, "b": 0.133145 },
+    "salarioMinimo": 1621.00,
+    "fontes": "INSS: Portaria Interministerial MPS/MF nº 13/2026. IR: Lei 15.270/2025 e tabela mensal da Receita Federal.",
+    "verificadoEm": "2026-10-28"
+  }
+}/*TABELAS_FIM*/;
+function tabela(ano) {
+  const anos = Object.keys(TABELAS).map(Number).sort((a, b) => a - b);
+  const usado = anos.filter(a => a <= ano).pop() || anos[0];
+  return { ano: usado, pedido: ano, exato: usado === ano, ...TABELAS[usado] };
+}
+function inss(base, T) { T = T || tabela(new Date().getFullYear()); let t = 0, prev = 0; for (const [lim, a] of T.inss) { if (base > prev) t += Math.floor((Math.min(base, lim) - prev) * a * 100 + 1e-6) / 100; prev = lim; } return Math.round(t * 100) / 100; }
+function irrf(bruto, inssV, dep, T) {
+  T = T || tabela(new Date().getFullYear());
+  const ded = Math.max(inssV + dep * T.irDependente, T.irDescontoSimplificado);
+  const base = Math.max(0, bruto - ded);
+  const [, a, p] = T.ir.find(r => r[0] == null || base <= r[0]);
+  let imp = Math.max(0, base * a - p);
+  let red = 0;
+  const R = T.irRedutor;
+  if (R) { if (bruto <= R.isentoAte) red = Math.min(imp, R.reducaoMax); else if (bruto <= R.faixaAte) red = Math.min(imp, Math.max(0, R.a - R.b * bruto)); }
+  return { base, aliq: a, bruto: imp, redutor: red, valor: Math.round((imp - red) * 100) / 100, simplificado: ded === T.irDescontoSimplificado };
+}
+
+function folha(p) {
+  const hora = p.salario / p.divisor;
+  const L = [];
+  const add = (cod, desc, ref, v, d = false) => { if (v > 0.004) L.push({ cod, desc, ref, v: Math.round(v * 100) / 100, d }); };
+  add('001', 'Salário Base', '30 dias', p.salario);
+  let heSum = 0;
+  for (const [pct, min] of Object.entries(p.heGroups)) { const v = min / 60 * hora * (1 + pct / 100); add('402', `Hora Extra ${pct}%`, fmtH(min), v); heSum += Math.round(v * 100) / 100; }
+  const vf = p.folga / 60 * hora * (1 + p.folgaPct / 100); add('056', 'Folga Trabalhada', fmtH(p.folga), vf); heSum += Math.round(vf * 100) / 100;
+  const vn = p.night / 60 * (60 / 52.5) * hora * (1 + p.nightPct / 100) * (1 + p.adNot / 100); add('059', 'H.E. Noturna', fmtH(p.night), vn); heSum += Math.round(vn * 100) / 100;
+  const dsr = p.uteis > 0 ? heSum / p.uteis * p.dsrDias : 0; add('420', 'Repouso Remunerado (DSR)', `${p.dsrDias}/${p.uteis}`, dsr);
+  add('900', 'Outros proventos', '', p.outrosProv);
+  const vFalta = p.faltasMin / 60 * hora;
+  const bruto = L.filter(l => !l.d).reduce((a, l) => a + l.v, 0) - vFalta;
+  if (vFalta > 0) add('910', 'Faltas / Atrasos', fmtH(p.faltasMin), vFalta, true);
+  const vInss = inss(bruto, p.T); add('903', 'INSS', (bruto ? (vInss / bruto * 100).toFixed(2).replace('.', ',') + '%' : ''), vInss, true);
+  const ir = irrf(bruto, vInss, p.dep, p.T); add('904', 'IRRF', (ir.aliq * 100).toFixed(1).replace('.', ',') + '%', ir.valor, true);
+  const vt = p.vtPct > 0 ? Math.min(p.salario * p.vtPct / 100, p.vtTeto || Infinity) : 0; add('905', 'Vale-transporte', p.vtPct + '%', vt, true);
+  add('906', 'Adiantamento', '', p.adiant, true);
+  add('907', 'Outros descontos', '', p.outrosDesc, true);
+  const venc = L.filter(l => !l.d).reduce((a, l) => a + l.v, 0);
+  const desc = L.filter(l => l.d).reduce((a, l) => a + l.v, 0);
+  return { hora, linhas: L, venc, desc, liquido: venc - desc, bruto, inss: vInss, ir, fgts: Math.floor(bruto * 8 + 1e-6) / 100 };
+}
+
+// ===== Holerite: items = [{s, x, y}] em coordenadas de tela (y para baixo), página 1 =====
+const num = s => +String(s).replace(/\./g, '').replace(',', '.');
+function parseHolerite(items) {
+  const it = items.filter(i => i.s && i.s.trim()).map(i => ({ ...i, s: i.s.trim() }));
+  const hCod = it.find(i => /^C[óo]d\.?$/i.test(i.s));
+  const hVen = it.find(i => /^Vencimentos?$/i.test(i.s));
+  const hDes = it.find(i => /^Descontos?$/i.test(i.s) && (!hCod || Math.abs(i.y - hCod.y) < 6));
+  const hRef = it.find(i => /^Refer[êe]ncia$/i.test(i.s));
+  if (!hCod || !hVen || !hDes) return null;
+  const liq = it.find(i => /L[íi]quido/i.test(i.s) && i.y > hCod.y);
+  const yEnd = liq ? liq.y : hCod.y + 400;
+  const corte = (hVen.x + hDes.x) / 2 + 25;
+  const rows = {};
+  it.filter(i => i.y > hCod.y + 4 && i.y < yEnd - 4).forEach(i => { const k = Math.round(i.y / 4); (rows[k] = rows[k] || []).push(i); });
+  const linhas = [];
+  for (const k of Object.keys(rows).sort((a, b) => a - b)) {
+    const r = rows[k].sort((a, b) => a.x - b.x);
+    const cod = r.find(i => /^\d{2,4}$/.test(i.s) && i.x < hCod.x + 30);
+    if (!cod) continue;
+    const vals = r.filter(i => /^-?[\d.]+,\d{2}$/.test(i.s) && i.x > (hRef ? hRef.x + 40 : hVen.x - 40));
+    const ref = r.find(i => hRef && Math.abs(i.x - hRef.x) < 45 && /\d/.test(i.s) && !vals.includes(i));
+    const desc = r.filter(i => i !== cod && i !== ref && !vals.includes(i)).map(i => i.s).join(' ');
+    if (!vals.length) continue;
+    const v = vals[vals.length - 1];
+    linhas.push({ cod: cod.s, desc, ref: ref ? ref.s : '', v: num(v.s), d: v.x > corte });
+  }
+  let liquido = null;
+  if (liq) { const c = it.filter(i => /^[\d.]+,\d{2}$/.test(i.s) && Math.abs(i.y - liq.y) < 6 && i.x > liq.x); if (c.length) liquido = num(c[c.length - 1].s); }
+  // nome: maior texto em caixa alta perto do código do funcionário
+  const nomeIt = it.find(i => i.y < hCod.y && i.y > hCod.y - 25 && /^[A-ZÀ-Ú ]{6,}$/.test(i.s) && i.x < hVen.x);
+  const cargoIt = it.find(i => i.y < hCod.y && i.y > hCod.y - 25 && /^[A-ZÀ-Ú .\/-]{3,}$/.test(i.s) && i.x >= hVen.x - 40 && i !== nomeIt);
+  const per = it.filter(i => /^\d{2}\/\d{2}\/\d{4}$/.test(i.s) && i.y < hCod.y).map(i => i.s);
+  // classificar
+  const cls = l => {
+    const t = l.desc.toLowerCase();
+    if (/inss/.test(t)) return 'inss';
+    if (/irrf|imposto de renda|i\.r\.r\.f/.test(t)) return 'irrf';
+    if (/sal[áa]rio\s*(base|mensal|normal)?$|^sal[áa]rio/.test(t) && !l.d) return 'salario';
+    if (/repouso|dsr|d\.s\.r/.test(t) && !l.d) return 'dsr';
+    if (/noturn/.test(t) && /h\.?\s*e|extra/.test(t)) return 'night';
+    if (/folga|descanso|domingo|feriado/.test(t) && !l.d) return 'folga';
+    if (/(hora|h\.)\s*extra|^h\.?e\.?\s/.test(t) && !l.d) return 'he';
+    return l.d ? 'outroDesc' : 'outroProv';
+  };
+  linhas.forEach(l => { l.tipo = cls(l); const p = l.desc.match(/(\d+)\s*%/); l.pct = p ? +p[1] : null;
+    const h = l.ref.match(/^0*(\d+):(\d{2})$/); l.min = h ? +h[1] * 60 + +h[2] : null; });
+  const sal = linhas.find(l => l.tipo === 'salario');
+  let salarioMensal = null, diasBase = 30;
+  if (sal) { const d = num(sal.ref || '30'); diasBase = d > 0 && d <= 31 ? d : 30; salarioMensal = Math.round(sal.v * 30 / diasBase * 100) / 100; }
+  return { linhas, liquido, salarioMensal, diasBase, nome: nomeIt ? nomeIt.s : '', cargo: cargoIt ? cargoIt.s : '', periodo: per.slice(0, 2).sort() };
+}
+
+// ===== Auditoria do ponto =====
+function auditoria(days, hora) {
+  const alerts = []; let supr = 0;
+  const withMarks = days.filter(d => d.marks.length);
+  for (const d of withMarks) {
+    const req = d.worked > 360 ? 60 : d.worked > 240 ? 15 : 0;
+    if (req && d.interval !== null && d.interval < req) { supr += req - d.interval; d.flagInt = d.interval < 30 ? 'crit' : 'warn'; }
+    if (d.worked > 600) d.flagJorn = true;
+  }
+  for (let k = 1; k < days.length; k++) {
+    const a = days[k - 1], b = days[k];
+    if (!a.marks.length || !b.marks.length) continue;
+    const out = a.marks[a.marks.length - 1][1], inn = b.marks[0][0];
+    const gap = 1440 - out + inn;
+    if (gap < 660) { b.flagInter = gap; }
+  }
+  return { suprMin: supr, suprValor: supr / 60 * hora * 1.5,
+    intCrit: withMarks.filter(d => d.flagInt === 'crit').length, intWarn: withMarks.filter(d => d.flagInt === 'warn').length,
+    jorn: withMarks.filter(d => d.flagJorn), inter: days.filter(d => d.flagInter), semInt: withMarks.filter(d => d.worked > 360 && d.interval === 0) };
+}
+
+// ===================== MÓDULO DE MODELOS (leitura genérica) =====================
+const MONEY = /^-?\d{1,3}(\.\d{3})*,\d{2}$|^-?\d+,\d{2}$/;
+const RE_TIME = /\b(\d{1,2}):(\d{2})\b/g;
+// agrupa itens {s,x,y,w} de uma página em linhas
+function linhasPDF(items) {
+  const it = items.filter(i => i.s && i.s.trim()).map(i => ({ s: i.s.trim(), x: i.x, y: i.y, w: i.w || i.s.length * 4 })).sort((a, b) => a.y - b.y || a.x - b.x);
+  const L = [];
+  for (const i of it) { let l = L.find(l => Math.abs(l.y - i.y) < 3); if (!l) { l = { y: i.y, items: [] }; L.push(l); } l.items.push(i); }
+  L.forEach(l => { l.items.sort((a, b) => a.x - b.x); l.text = l.items.map(i => i.s).join(' '); });
+  return L.sort((a, b) => a.y - b.y);
+}
+const WD = { dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6, 'sáb': 6 };
+const WDN = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+function assinatura(labels) { return labels.map(s => s.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')).filter(Boolean).join('|').slice(0, 200); }
+function tipoColunaPorTitulo(t) {
+  const s = (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (!s) return '';
+  if (/hor[a]?rio|jornada|previst|escala|turno|contratual/.test(s)) return 'escala';
+  if (/trab|normais|normal|extra|h\.?\s?e|notur|not\.|falta|atras|saldo|debito|credito|total|abono|dsr|banco|adic|interv|ref/.test(s)) return 'total';
+  if (/^e\d|^s\d|ent|sai|batid|marca|real|registr|^\d[ae]?$/.test(s)) return 'marca';
+  return '';
+}
+
+// ---- Ponto genérico. pages = [[{s,x,y,w}]], modelo = { colunas: {idx: tipo}, jornadaSemana, jornadaSabado }
+function parsePontoGenerico(pages, modelo = {}) {
+  const all = []; pages.forEach((p, pi) => linhasPDF(p).forEach(l => all.push({ ...l, page: pi })));
+  const texto = all.map(l => l.text).join('\n');
+  // ano de referência
+  const per = texto.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(?:a|at[ée]|-|à)\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+  const anoRef = per ? +per[6] : (texto.match(/\b(20\d{2})\b/) || [])[1] || new Date().getFullYear();
+  const nome = ((texto.match(/(?:Nome|Funcion[áa]rio|Empregado|Colaborador)\s*:?\s*([A-ZÀ-Ú][A-ZÀ-Ú .'-]{5,}?)(?=\s{2,}|\s+(?:Cargo|Fun[çc][ãa]o|Matr|PIS|CPF|Admiss)|$)/m) || [])[1] || '').trim();
+  const reDia = /^(\d{2})\/(\d{2})(?:\/(\d{2,4}))?\b/;
+  const dias = [];
+  for (const l of all) {
+    const first = l.items.slice(0, 2).map(i => i.s).join(' ');
+    const m = first.match(reDia) || l.text.match(reDia);
+    if (!m) continue;
+    let y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : +anoRef;
+    // tokens de horário com posição x aproximada
+    const toks = [];
+    for (const it of l.items) {
+      if (reDia.test(it.s) && it === l.items[0] && !/\d{2}:\d{2}/.test(it.s)) continue;
+      let mm; RE_TIME.lastIndex = 0;
+      while ((mm = RE_TIME.exec(it.s))) {
+        if (+mm[1] > 23 && !/total/i.test(it.s)) { /* totais tipo 35:01 */ }
+        const x = it.x + (it.w * mm.index / Math.max(1, it.s.length));
+        toks.push({ v: +mm[1] * 60 + +mm[2], s: mm[0], x });
+      }
+    }
+    dias.push({ line: l, d: +m[1], m: +m[2], y, toks, text: l.text });
+  }
+  if (!dias.length) return null;
+  // ano: se o período cruza o ano (dez→jan), ajusta
+  if (per) dias.forEach(d => { if (!/\d{2}\/\d{2}\/\d{2,4}/.test(d.text.slice(0, 12))) d.y = d.m >= +per[2] && +per[3] !== +per[6] ? +per[3] : +per[6]; });
+  // colunas por agrupamento de x
+  const xs = dias.flatMap(d => d.toks.map(t => t.x)).sort((a, b) => a - b);
+  const cols = [];
+  for (const x of xs) { const c = cols.find(c => Math.abs(c.x - x) < 14); if (c) { c.n++; c.x = (c.x * (c.n - 1) + x) / c.n; } else cols.push({ x, n: 1 }); }
+  cols.sort((a, b) => a.x - b.x);
+  const minN = Math.max(1, Math.round(dias.length * 0.08));
+  const colsOk = cols.filter(c => c.n >= minN);
+  // títulos: procura acima da primeira linha de dia
+  const primeira = dias[0].line;
+  const cab = all.filter(l => l.page === primeira.page && l.y < primeira.y && l.y > primeira.y - 45);
+  colsOk.forEach((c, k) => {
+    c.idx = k;
+    let best = null, bd = 30;
+    for (const l of cab) for (const it of l.items) { if (/\d/.test(it.s)) continue; const cx = it.x + it.w / 2; const d = Math.min(Math.abs(cx - c.x - 10), Math.abs(it.x - c.x)); if (d < bd) { bd = d; best = it; } }
+    c.titulo = best ? best.s : '';
+    c.auto = tipoColunaPorTitulo(c.titulo);
+    c.exemplos = dias.map(d => (d.toks.find(t => Math.abs(t.x - c.x) < 14) || {}).s).filter(Boolean).slice(0, 4);
+  });
+  // sem títulos reconhecidos: as primeiras colunas em ordem crescente são marcações
+  if (!colsOk.some(c => c.auto === 'marca')) {
+    const firstTotal = colsOk.findIndex(c => c.auto === 'total');
+    const lim = firstTotal < 0 ? colsOk.length : firstTotal;
+    let k0 = colsOk.findIndex(c => c.auto !== 'escala'); if (k0 < 0) k0 = 0;
+    // escolhe o maior número par de colunas seguidas cujos valores crescem na maioria das linhas
+    let best = 0;
+    for (let n = 2; k0 + n <= lim; n += 2) {
+      const sub = colsOk.slice(k0, k0 + n);
+      let ok = 0, tot = 0;
+      for (const d of dias) { const v = sub.map(c => (d.toks.find(t => Math.abs(t.x - c.x) < 14) || {}).v).filter(v => v != null); if (v.length >= 2) { tot++; if (v.every((x, i) => !i || x >= v[i - 1])) ok++; } }
+      if (tot && ok / tot > 0.7) best = n;
+    }
+    colsOk.forEach((c, k) => { if (!c.auto) c.auto = (k >= k0 && k < k0 + best) ? 'marca' : 'total'; });
+  }
+  colsOk.forEach(c => { c.auto = c.auto || 'total'; c.tipo = (modelo.colunas && modelo.colunas[c.idx]) || c.auto; });
+  const jSem = modelo.jornadaSemana != null ? modelo.jornadaSemana : 480, jSab = modelo.jornadaSabado != null ? modelo.jornadaSabado : 0;
+  const ferNac = new Set();
+  const days = dias.map(d => {
+    const date = new Date(d.y, d.m - 1, d.d), wdN = date.getDay();
+    if (!ferNac.has(d.y)) { feriadosNacionais(d.y).forEach(f => ferNac.add(f.toDateString())); ferNac.add(d.y); }
+    const val = tipo => colsOk.filter(c => c.tipo === tipo).map(c => d.toks.find(t => Math.abs(t.x - c.x) < 14)).filter(Boolean).map(t => t.v);
+    const mk = val('marca'); const marks = [];
+    for (let k = 0; k + 1 < mk.length; k += 2) marks.push([mk[k], mk[k + 1]]);
+    const esc = val('escala'); let sched = 0;
+    if (esc.length >= 2) { for (let k = 0; k + 1 < esc.length; k += 2) { let a = esc[k], b = esc[k + 1]; if (b < a) b += 1440; sched += b - a; } if (esc.length === 2 && sched > 360) sched -= 60; }
+    else sched = wdN === 0 ? 0 : wdN === 6 ? jSab : jSem;
+    const txt = d.text.toLowerCase();
+    const feriado = /feriado/.test(txt) || ferNac.has(date.toDateString());
+    const rest = /folga|descanso|dsr|compensad|repouso/.test(txt) || wdN === 0 || (wdN === 6 && !jSab);
+    if (feriado || rest) sched = 0;
+    return { date: `${String(d.d).padStart(2, '0')}/${String(d.m).padStart(2, '0')}`, d: d.d, m: d.m, y: d.y, wd: WDN[wdN], feriado, rest, sched, marks };
+  });
+  const res = finalizarPonto(days);
+  res.nome = nome.replace(/\s+/g, ' ');
+  res.modelo = { tipo: 'generico', colunas: colsOk.map(c => ({ idx: c.idx, titulo: c.titulo, auto: c.auto, tipo: c.tipo, exemplos: c.exemplos })),
+    assinatura: assinatura(['ponto', ...colsOk.map(c => c.titulo || '?')]), jornadaSemana: jSem, jornadaSabado: jSab };
+  const fa = texto.match(/Faltas?\s*:?\s*(\d{1,3}:\d{2})/i), at = texto.match(/Atrasos?\s*:?\s*(\d{1,3}:\d{2})/i);
+  res.totals = { faltas: fa ? fa[1] : '', atrasos: at ? at[1] : '' };
+  return res;
+}
+
+// cálculos diários comuns (usado pelos dois leitores)
+function finalizarPonto(days) {
+  for (const d of days) {
+    let worked = 0, night = 0;
+    for (let [a, b] of d.marks) { if (b < a) b += 1440; worked += b - a; const ov = (s, e) => Math.max(0, Math.min(b, e) - Math.max(a, s)); night += ov(1320, 1740) + ov(0, 300); }
+    d.worked = worked; d.night = night;
+    d.off = d.rest || d.feriado || !d.sched;
+    if (d.off) { d.folga = worked; d.he = 0; d.deficit = 0; } else { d.folga = 0; d.he = Math.max(0, worked - d.sched); d.deficit = d.marks.length ? Math.max(0, d.sched - worked) : d.sched; }
+    d.interval = d.marks.length > 1 ? d.marks.slice(1).reduce((acc, m, k) => acc + (m[0] - d.marks[k][1]), 0) : (d.marks.length ? 0 : null);
+  }
+  let he = 0, folga = 0, night = 0, deficit = 0;
+  for (const d of days) { if (d.off) folga += d.folga; else { const n = Math.min(d.night, d.he); he += d.he - n; night += n; } deficit += d.deficit; }
+  const last = days[days.length - 1];
+  return { nome: '', days, computed: { he, folga, night, deficit }, summary: [], totals: {}, payMonth: last ? last.m : null, payYear: last ? last.y : null };
+}
+
+// ---- Holerite genérico: page = [{s,x,y,w}]
+const TIPOS_VERBA = { salario: 'Salário', he: 'Hora extra', folga: 'Folga/feriado trabalhado', night: 'Extra noturna', adnot: 'Adicional noturno', dsr: 'DSR/repouso', inss: 'INSS', irrf: 'IRRF', vt: 'Vale-transporte', adiant: 'Adiantamento', faltas: 'Faltas/atrasos', outroProv: 'Outro provento', outroDesc: 'Outro desconto', ignorar: 'Ignorar' };
+function classificarVerba(desc, isDesc) {
+  const t = desc.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (/inss|previd/.test(t)) return 'inss';
+  if (/irrf|imp\.?\s*renda|imposto de renda|i\.r\.r\.f|^ir\b/.test(t)) return 'irrf';
+  if (/vale.?transp|\bv\.?t\b/.test(t)) return 'vt';
+  if (/adiant|antecip/.test(t)) return 'adiant';
+  if (/falta|atraso/.test(t) && isDesc) return 'faltas';
+  if (/repouso|\bdsr\b|d\.s\.r|reflexo/.test(t) && !isDesc) return 'dsr';
+  if (/notur/.test(t) && /(h\.?\s*e|extra)/.test(t)) return 'night';
+  if (/adic.*notur|notur/.test(t)) return 'adnot';
+  if (/folga|domingo|feriado|descanso/.test(t) && !isDesc) return 'folga';
+  if (/(hora|hrs?|h\.)\s*extra|\bh\.?\s?e\.?\b|extras?\s*\d+\s*%/.test(t) && !isDesc) return 'he';
+  if (/^sal[a]?rio|salario (base|mensal|contratual|normal)|horas normais|dias trabalhados|mensalista|horista/.test(t) && !isDesc) return 'salario';
+  return isDesc ? 'outroDesc' : 'outroProv';
+}
+function finalizarHolerite(h, overrides = {}) {
+  h.linhas.forEach(l => {
+    l.tipoAuto = classificarVerba(l.desc, l.d);
+    const k = l.desc.toUpperCase().replace(/\s+/g, ' ').trim();
+    l.tipo = overrides[k] || l.tipoAuto;
+    const p = l.desc.match(/(\d+)\s*%/); l.pct = p ? +p[1] : null;
+    const hm = l.ref.match(/^0*(\d+):(\d{2})$/);
+    l.min = hm ? +hm[1] * 60 + +hm[2] : (['he', 'folga', 'night'].includes(l.tipo) && l.ref && MONEY.test(l.ref) ? Math.round(num(l.ref) * 60) : null);
+  });
+  const sal = h.linhas.find(l => l.tipo === 'salario');
+  if (sal) { const d = sal.ref ? num(sal.ref) : 30; h.diasBase = d > 0 && d <= 31 ? d : 30; if (!h.salarioMensal || d <= 31) h.salarioMensal = h.salarioMensal && d > 31 ? h.salarioMensal : Math.round(sal.v * 30 / h.diasBase * 100) / 100; }
+  return h;
+}
+function parseHoleriteGenerico(items) {
+  const L = linhasPDF(items);
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const kw = { desc: /descri|evento|verba|rubrica|historico|discrimina/, ref: /^ref|refer|qtd|quant|^qt/, prov: /venc|provent|credito|^ganhos/, des: /descont|debito/ };
+  let head = null, cols = {};
+  for (const l of L) {
+    const found = {};
+    for (const it of l.items) { const s = norm(it.s); for (const [k, re] of Object.entries(kw)) if (re.test(s) && !found[k]) found[k] = it; }
+    if (found.prov && found.des) { head = l; cols = found; break; }
+  }
+  const linhas = []; let liquido = null, salarioMensal = null;
+  const ini = head ? L.indexOf(head) + 1 : 0;
+  for (let k = ini; k < L.length; k++) {
+    const l = L[k]; const t = norm(l.text);
+    if (/l[i]quido/.test(t)) { const m = l.items.filter(i => MONEY.test(i.s)); if (m.length) liquido = num(m[m.length - 1].s); else { const nx = L[k + 1]; if (nx) { const mm = nx.items.filter(i => MONEY.test(i.s)); if (mm.length) liquido = num(mm[mm.length - 1].s); } } if (head) break; continue; }
+    const temCod = l.items[0] && /^\d{1,6}$/.test(l.items[0].s);
+    if (/^total|totais/.test(t) || (!temCod && /base|fgts|faixa|contrib/.test(t))) continue;
+    const vals = l.items.filter(i => MONEY.test(i.s));
+    const txt = l.items.filter(i => /[a-zA-ZÀ-ú]/.test(i.s));
+    if (!vals.length || !txt.length) continue;
+    const v = vals[vals.length - 1];
+    let isDesc;
+    if (head) { const right = i => i.x + i.w; const dp = Math.abs(right(v) - right(cols.prov)), dd = Math.abs(right(v) - right(cols.des)); isDesc = dd < dp; }
+    const codIt = l.items[0] && /^\d{1,6}$/.test(l.items[0].s) ? l.items[0] : null;
+    const refIt = vals.length > 1 ? vals[vals.length - 2] : l.items.find(i => /^\d{1,3}:\d{2}$/.test(i.s));
+    const desc = l.items.filter(i => i !== codIt && i !== v && i !== refIt && !(MONEY.test(i.s) && vals.includes(i))).map(i => i.s).join(' ').trim();
+    if (!desc) continue;
+    if (isDesc === undefined) isDesc = /inss|irrf|imposto|vale|adiant|desc|falta|atraso|pens|plano|sindic|emprest|consig/i.test(desc);
+    linhas.push({ cod: codIt ? codIt.s : '', desc, ref: refIt ? refIt.s : '', v: num(v.s), d: isDesc });
+  }
+  if (!linhas.length) return null;
+  // salário base em rodapé (rótulo e valor abaixo ou ao lado)
+  for (let k = 0; k < L.length && salarioMensal == null; k++) for (const it of L[k].items) {
+    if (!/sal(a|á)rio\s*(base|contratual|mensal)|sal\.\s*base|saldo base/i.test(it.s)) continue;
+    const same = L[k].items.find(i => i.x > it.x && MONEY.test(i.s) && i.x - it.x < 120);
+    if (same) { salarioMensal = num(same.s); break; }
+    const nx = L[k + 1]; if (nx) { const below = nx.items.filter(i => MONEY.test(i.s)).sort((a, b) => Math.abs(a.x - it.x) - Math.abs(b.x - it.x))[0]; if (below && Math.abs(below.x - it.x) < 60) { salarioMensal = num(below.s); break; } }
+  }
+  const texto = L.map(l => l.text).join('\n');
+  const nome = ((texto.match(/(?:Nome|Funcion[áa]rio|Empregado|Colaborador)\s*:?\s*([A-ZÀ-Ú][A-ZÀ-Ú .'-]{5,}?)(?=\s{2,}|\s+(?:Cargo|Fun[çc][ãa]o|Matr|CBO|Admiss|PIS|CPF)|$)/m) || [])[1] || '').trim();
+  const cargo = ((texto.match(/(?:Cargo|Fun[çc][ãa]o)\s*:?\s*([A-ZÀ-Ú][A-ZÀ-Ú .\/-]{2,}?)(?=\s{2,}|\s+(?:CBO|Admiss|Compet|Refer)|$)/m) || [])[1] || '').trim();
+  let periodo = [];
+  const comp = texto.match(/(?:Compet[êe]ncia|Refer[êe]ncia|M[êe]s\/Ano|Per[íi]odo)\s*:?\s*(\d{2})\/(\d{4})/i);
+  if (comp) periodo = [`01/${comp[1]}/${comp[2]}`];
+  else { const ds = texto.match(/\d{2}\/\d{2}\/\d{4}/g); if (ds) periodo = ds.slice(0, 2); }
+  return { linhas, liquido, salarioMensal, diasBase: 30, nome, cargo, periodo, modelo: { tipo: 'generico', cabecalho: !!head } };
+}
+// tenta o modelo conhecido e cai no genérico
+function lerHolerite(page, overrides) {
+  let h = null;
+  try { h = parseHolerite(page); if (h) h.modelo = { tipo: 'conhecido' }; } catch (e) { h = null; }
+  if (!h || !h.linhas.length) h = parseHoleriteGenerico(page);
+  if (!h) return null;
+  return finalizarHolerite(h, overrides);
+}
+function lerPonto(pages, modelo) {
+  const strs = pages.flat().map(i => i.s);
+  const r = parsePonto(strs);
+  if (r.days.length && r.days.some(d => d.marks.length) && !(modelo && modelo.forcarGenerico)) { r.modelo = { tipo: 'conhecido', assinatura: 'dimep' }; return r; }
+  return parsePontoGenerico(pages, modelo || {});
+}
+function inssDetalhe(base, T) {
+  const out = []; let prev = 0;
+  for (const [lim, a] of T.inss) { if (base > prev) { const fx = Math.min(base, lim) - prev; out.push({ de: prev, ate: Math.min(base, lim), aliq: a, valor: Math.floor(fx * a * 100 + 1e-6) / 100 }); } prev = lim; }
+  return out;
+}
+if (typeof module !== 'undefined' && module.exports) module.exports = { lerPonto, lerHolerite, parsePontoGenerico, parseHoleriteGenerico, linhasPDF, inssDetalhe, TIPOS_VERBA, finalizarHolerite, tabela, TABELAS, parsePonto, parseHolerite, auditoria, calendario, folha, fmtH, inss, irrf };
+
+</script>
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+const brl = v => 'R$ ' + (Math.round(v*100)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const nb = v => (Math.round(v*100)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pnum = s => { s=String(s).trim(); if(!s) return 0; if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.'); const v=parseFloat(s); return isNaN(v)?0:v; };
+const pmin = s => { s=String(s).trim(); const m=s.match(/^(\d+):(\d{1,2})$/); if(m) return +m[1]*60 + +m[2]; return Math.round(pnum(s)*60); };
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---- pdf.js com worker em blob (o worker do CDN não roda direto de outra origem)
+let pdfReady = false;
+function initPdf(){
+  if (pdfReady || !window.pdfjsLib) return;
+  if (window.PDF_WORKER_LOCAL) { pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDF_WORKER_LOCAL; pdfReady = true; return; }
+  const src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  try { const w = new Worker(URL.createObjectURL(new Blob([`importScripts("${src}");`],{type:'text/javascript'}))); pdfjsLib.GlobalWorkerOptions.workerPort = w; }
+  catch(e){ pdfjsLib.GlobalWorkerOptions.workerSrc = src; }
+  pdfReady = true;
+}
+async function readPdf(file){
+  initPdf();
+  if (!window.pdfjsLib) throw new Error('Não foi possível carregar o leitor de PDF. Verifique a conexão e recarregue a página.');
+  const doc = await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  const pages = [];
+  for (let p=1;p<=doc.numPages;p++){
+    const pg = await doc.getPage(p); const vp = pg.getViewport({scale:1}); const tc = await pg.getTextContent();
+    pages.push(tc.items.map(i=>{ const t=pdfjsLib.Util.transform(vp.transform,i.transform); return {s:i.str,x:t[4],y:t[5]}; }));
+  }
+  return pages;
+}
+
+// ---- estado
+let ponto = null, hol = null, holSalario = null, pontoPages = null, holPage = null;
+const store = { get(){ try{return JSON.parse(localStorage.getItem('calc-holerite-v1')||'{}');}catch(e){return {};} }, set(o){ try{localStorage.setItem('calc-holerite-v1',JSON.stringify(o));}catch(e){} } };
+const nomeAtual = () => ($('nome').value.trim() || (ponto && ponto.nome) || (hol && hol.nome) || '').toUpperCase();
+
+// exemplo embutido (horas do ponto 09/2026, sem nome)
+const EX = {"days":[["25/08","ter",0,540,[[583,822],[840,1080]]],["26/08","qua",0,540,[[541,841],[873,1081]]],["27/08","qui",0,540,[[577,769],[787,1085]]],["28/08","sex",0,540,[[537,806],[841,1082]]],["29/08","sáb",1,0,[]],["30/08","dom",1,0,[]],["31/08","seg",0,540,[[571,863],[902,1081]]],["01/09","ter",0,540,[[596,912],[936,1082]]],["02/09","qua",0,540,[[572,805],[837,1082]]],["03/09","qui",0,540,[[555,783],[825,1081]]],["04/09","sex",0,540,[[565,747],[780,1081]]],["05/09","sáb",1,0,[]],["06/09","dom",1,0,[]],["07/09","seg",2,0,[]],["08/09","ter",0,540,[[579,780],[803,1082]]],["09/09","qua",0,540,[[702,780],[828,1082]]],["10/09","qui",0,540,[[563,776],[813,1080]]],["11/09","sex",0,540,[[563,806],[845,1085]]],["12/09","sáb",1,0,[[504,1130]]],["13/09","dom",1,0,[]],["14/09","seg",0,540,[[563,746],[780,1081]]],["15/09","ter",0,540,[[562,750],[766,1337]]],["16/09","qua",0,540,[[565,759],[780,1359]]],["17/09","qui",0,540,[[578,781],[800,1364]]],["18/09","sex",0,540,[[570,750],[778,1081]]],["19/09","sáb",1,0,[[531,818],[831,1033]]],["20/09","dom",1,0,[]],["21/09","seg",0,540,[[558,838],[859,1082]]],["22/09","ter",0,540,[[585,741],[774,1081]]],["23/09","qua",0,540,[[593,730],[762,1082]]],["24/09","qui",0,540,[[575,791],[809,1092]]]]};
+function exemploStrings(){
+  const out=[]; const hh=m=>fmtH(m);
+  for (const [dt,wd,kind,sch,mk] of EX.days){
+    out.push(`${dt}/2026 ${wd}${kind===2?' Feriado':''}`);
+    if (kind===1) out.push('Descanso Semanal'); else if (kind===2) out.push('Feriado'); else out.push('09:00 - 12:00 | 13:00 - 18:00');
+    if (mk.length) out.push(mk.map(([a,b])=>hh(a)+'-'+hh(b)).join(' '));
+  }
+  out.push('Totais:','Totais horas extras por percentual:','14:46 - Hora Extra 100%','01:40 - Hora Extra Noturna 100%','18:35 - Folga Trabalhada','Faltas:','00:00','Atrasos:','00:00');
+  return out;
+}
+
+// ---- preencher campos a partir do ponto
+function aplicarPonto(){
+  const o = ponto.official, c = ponto.computed;
+  let groups;
+  if (o) { groups = Object.entries(o.heGroups).sort((a,b)=>b[1]-a[1]); $('folga').value=fmtH(o.folga); $('night').value=fmtH(o.night); $('nightp').value=o.nightPct; }
+  else { groups=[[ $('he1p').value||100, c.he ]]; $('folga').value=fmtH(c.folga); $('night').value=fmtH(c.night); }
+  $('he1').value = groups[0] ? fmtH(groups[0][1]) : '00:00'; if (groups[0]) $('he1p').value = groups[0][0];
+  $('he2').value = groups[1] ? fmtH(groups[1][1]) : '00:00'; if (groups[1]) $('he2p').value = groups[1][0];
+  const t = ponto.totals; const fa = (t.faltas?pmin(t.faltas):0) + (t.atrasos?pmin(t.atrasos):0);
+  $('faltas').value = fmtH(fa);
+  $('horSub').textContent = o ? 'Preenchidas com os totais do relatório de ponto. Pode corrigir à mão (formato HH:MM).'
+    : 'O relatório não tem totais por percentual, então as horas foram calculadas pelas marcações. Confira e corrija se precisar.';
+  if (ponto.payMonth) { $('mes').value = `${ponto.payYear}-${String(ponto.payMonth).padStart(2,'0')}`; aplicarMes(); }
+}
+function aplicarMes(){
+  const [y,m] = $('mes').value.split('-').map(Number); if(!y||!m) return;
+  const cal = calendario(y,m);
+  $('uteis').value = cal.uteis; $('dsr').value = cal.dsr;
+  $('ferInfo').textContent = `${cal.domingos} domingos` + (cal.feriados.length? ' + feriado dia '+cal.feriados.join(', '):'') + '. Some feriados municipais à mão.';
+}
+
+// ---- holerite
+function aplicarHolerite(){
+  holSalario = hol.salarioMensal || pnum($('salario').value);
+  const saved = store.get().sal || {};
+  const nome = hol.nome || nomeAtual();
+  if (hol.salarioMensal) $('salario').value = nb(holSalario);
+  $('salOrig').textContent = 'Do holerite' + (hol.diasBase!==30 ? ` (${hol.diasBase} dias, convertido para 30)` : '');
+  const soma = (...t) => hol.linhas.filter(l=>t.includes(l.tipo)).reduce((a,l)=>a+l.v,0);
+  $('outProv').value = nb(soma('outroProv','adnot')); $('outDesc').value = nb(soma('outroDesc'));
+  $('adiant').value = nb(soma('adiant'));
+  const vt = soma('vt'); $('vt').value = vt && holSalario ? String(Math.round(vt/holSalario*10000)/100).replace('.',',') : '0';
+  if (saved[nome] && saved[nome].reaj) $('reaj').value = saved[nome].reaj;
+}
+
+// ---- cálculo e render
+function params(){
+  const base = pnum($('salario').value), reaj = pnum($('reaj').value);
+  const heGroups = {}; const add=(p,m)=>{ if(m>0) heGroups[p]=(heGroups[p]||0)+m; };
+  add(pnum($('he1p').value), pmin($('he1').value)); add(pnum($('he2p').value), pmin($('he2').value));
+  return { salarioBase: base, reaj, salario: base*(1+reaj/100), divisor: pnum($('divisor').value)||220,
+    heGroups, folga: pmin($('folga').value), folgaPct: pnum($('folgap').value), night: pmin($('night').value), nightPct: pnum($('nightp').value),
+    T: tabela(+($('mes').value.split('-')[0]) || new Date().getFullYear()), adNot: pnum($('adnot').value), uteis: pnum($('uteis').value), dsrDias: pnum($('dsr').value), outrosProv: pnum($('outProv').value),
+    faltasMin: pmin($('faltas').value), dep: pnum($('dep').value), vtPct: Math.min(6,pnum($('vt').value)), adiant: pnum($('adiant').value), outrosDesc: pnum($('outDesc').value) };
+}
+function render(){
+  const p = params();
+  $('salNovo').textContent = p.reaj ? 'Novo salário: '+brl(p.salario) : '';
+  const f = folha(p);
+  $('liq').textContent = brl(f.liquido);
+  const [y,m] = $('mes').value.split('-');
+  $('resSub').textContent = `Período ${m}/${y}` + (nomeAtual()? ' · '+nomeAtual() : ' · exemplo');
+  let t = '<thead><tr><th>Descrição</th><th class="n">Ref.</th><th class="n">Proventos</th><th class="n">Descontos</th></tr></thead><tbody>';
+  for (const l of f.linhas) t += `<tr><td>${esc(l.desc)}</td><td class="n">${esc(l.ref)}</td><td class="n">${l.d?'':nb(l.v)}</td><td class="n ${l.d?'desc':''}">${l.d?nb(l.v):''}</td></tr>`;
+  t += `<tr class="tot"><td>Totais</td><td></td><td class="n">${nb(f.venc)}</td><td class="n desc">${nb(f.desc)}</td></tr></tbody>`;
+  $('tbl').innerHTML = t;
+  $('mini').innerHTML = `<div><span>Valor da hora</span><b>${brl(f.hora)}</b></div><div><span>FGTS do mês (empresa)</span><b>${brl(f.fgts)}</b></div>
+    <div><span>Base do IR</span><b>${brl(f.ir.base)}</b></div><div><span>IR antes da isenção</span><b>${brl(f.ir.bruto)}</b></div>`;
+  // comparação
+  const cmpCard = $('cmpCard');
+  if (hol) {
+    cmpCard.hidden = false;
+    const pago = tipo => hol.linhas.filter(l=>l.tipo===tipo).reduce((a,l)=>a+l.v,0);
+    const pagoH = tipo => hol.linhas.filter(l=>l.tipo===tipo && l.min!=null).reduce((a,l)=>a+l.min,0);
+    const calc = re => f.linhas.filter(l=>re.test(l.desc)).reduce((a,l)=>a+l.v,0);
+    const rows = [
+      ['Salário', pago('salario'), calc(/^Sal[áa]rio/), null, null],
+      ['Horas extras', pago('he'), calc(/^Hora Extra/), pagoH('he'), Object.values(p.heGroups).reduce((a,b)=>a+b,0)],
+      ['Folga/feriado trabalhado', pago('folga'), calc(/^Folga/), pagoH('folga'), p.folga],
+      ['Extra noturna', pago('night'), calc(/Noturna/), pagoH('night'), p.night],
+      ['DSR sobre extras', pago('dsr'), calc(/Repouso/), null, null],
+      ['INSS', pago('inss'), f.inss, null, null],
+      ['IRRF', pago('irrf'), f.ir.valor, null, null],
+      ['Vale-transporte', pago('vt'), calc(/^Vale/), null, null],
+      ['Adiantamento', pago('adiant'), calc(/^Adiant/), null, null],
+      ['Faltas/atrasos', pago('faltas'), calc(/^Faltas/), null, null],
+      ['Outros', pago('outroProv')+pago('adnot')-pago('outroDesc'), calc(/^Outros proventos/)-calc(/^Outros descontos/), null, null],
+    ];
+    const liqPago = liquidoPago();
+    let h = '<thead><tr><th>Item</th><th class="n">Pago</th><th class="n">Calculado</th><th class="n">Diferença</th></tr></thead><tbody>';
+    let algum = false;
+    for (const [nome,pg,cl,hp,hc] of rows){
+      if (Math.abs(pg)<0.005 && Math.abs(cl)<0.005) continue;
+      const d = cl - pg; const isDesc = ['INSS','IRRF','Vale-transporte','Adiantamento','Faltas/atrasos'].includes(nome);
+      const bad = Math.abs(d) > 0.05; if (bad) algum = true;
+      const cls = !bad ? 'diff-ok' : ((isDesc ? d<0 : d>0) ? 'diff-bad' : 'diff-warn');
+      const horas = (hp!=null && (hp||hc)) ? `<br><small style="color:var(--muted)">${fmtH(hp)} pagas · ${fmtH(hc)} no ponto</small>` : '';
+      h += `<tr><td>${nome}${horas}</td><td class="n">${nb(pg)}</td><td class="n">${nb(cl)}</td><td class="n ${cls}">${bad?(d>0?'+':'')+nb(d):'ok'}</td></tr>`;
+    }
+    const dl = f.liquido - liqPago;
+    h += `<tr class="tot"><td>Líquido</td><td class="n">${nb(liqPago)}</td><td class="n">${nb(f.liquido)}</td><td class="n ${Math.abs(dl)>0.05?(dl>0?'diff-bad':'diff-warn'):'diff-ok'}">${Math.abs(dl)>0.05?(dl>0?'+':'')+nb(dl):'ok'}</td></tr></tbody>`;
+    $('cmp').innerHTML = h;
+    $('liqCmp').innerHTML = Math.abs(dl)<=0.05 ? '<span class="pill ok">Igual ao holerite</span>'
+      : `<span class="pill ${dl>0?'crit':'warn'}">${dl>0?'Holerite pagou '+brl(dl)+' a menos':'Holerite pagou '+brl(-dl)+' a mais'}</span>`;
+    $('cmpNote').textContent = (p.reaj ? 'Com o reajuste aplicado, as diferenças são esperadas. Zere o reajuste para conferir o holerite. ' : '')
+      + 'Diferença positiva em vermelho indica valor que pode ter sido pago a menos. Diferença em INSS ou IR segue a mudança do bruto.';
+  } else { cmpCard.hidden = true; $('liqCmp').innerHTML = ''; }
+  renderAudit(f.hora);
+  renderTab(p.T);
+  renderModelo();
+  renderAnalise(p, f);
+  const nome = nomeAtual();
+  if (nome){ const s = store.get(); s.sal = s.sal || {}; s.sal[nome] = { salario: p.salarioBase, reaj: p.reaj }; store.set(s); }
+}
+function renderAudit(hora){
+  if (!ponto){ $('alerts').innerHTML=''; $('days').innerHTML=''; return; }
+  const a = auditoria(ponto.days, hora);
+  const al = [];
+  if (a.suprMin>0) al.push(['crit', `Intervalo de almoço abaixo do mínimo em ${a.intCrit + a.intWarn} dias`,
+    `${a.intCrit} dias com menos de 30 min. Somando o que faltou para 1h: ${fmtH(a.suprMin)}, cerca de ${brl(a.suprValor)} de indenização (hora + 50%, art. 71 §4º da CLT). Se a convenção permitir intervalo de 30 min, o valor diminui. Esse valor não entra no líquido acima.`]);
+  if (a.semInt.length) al.push(['crit', 'Dia trabalhado sem intervalo', a.semInt.map(d=>`${d.date} (${fmtH(d.worked)} seguidas)`).join(', ')+'.']);
+  if (a.jorn.length) al.push(['warn', `Jornada acima de 10h em ${a.jorn.length} dia(s)`, a.jorn.map(d=>`${d.date}: ${fmtH(d.worked)}`).join(' · ')+'. O limite legal é 8h + 2h extras por dia.']);
+  if (a.inter.length) al.push(['warn', 'Menos de 11h de descanso entre jornadas', a.inter.map(d=>`antes de ${d.date}: ${fmtH(d.flagInter)}`).join(' · ')+'. O tempo que faltou deve ser pago como hora extra.']);
+  const def = ponto.computed.deficit, desc = pmin($('faltas').value);
+  if (def>0) al.push([desc? 'warn':'ok', `Horas a menos no período: ${fmtH(def)}`, desc ? `Descontados: ${fmtH(desc)}.` : 'O relatório não desconta esses atrasos (faltas e atrasos zerados).']);
+  if (ponto.official){ const c=ponto.computed, o=ponto.official; const heO=Object.values(o.heGroups).reduce((x,y)=>x+y,0);
+    const ok = Math.abs(c.he-heO)<=2 && Math.abs(c.folga-o.folga)<=2 && Math.abs(c.night-o.night)<=2;
+    al.push([ok?'ok':'warn', ok?'Totais do relatório conferem com as marcações':'Totais do relatório diferentes das marcações',
+      `Pelas marcações: extras ${fmtH(c.he)}, folga ${fmtH(c.folga)}, noturna ${fmtH(c.night)}. No relatório: ${fmtH(heO)}, ${fmtH(o.folga)} e ${fmtH(o.night)}.`]); }
+  if (!al.length) al.push(['ok','Nenhum problema encontrado no ponto','']);
+  $('alerts').innerHTML = al.map(([c,b,p])=>`<div class="al ${c}"><b>${esc(b)}</b>${p?`<p>${esc(p)}</p>`:''}</div>`).join('');
+  let t = '<thead><tr><th>Dia</th><th>Marcações</th><th class="n">Trab.</th><th class="n">Extra</th><th class="n">Interv.</th></tr></thead><tbody>';
+  for (const d of ponto.days){
+    const mk = d.marks.map(([x,y])=>fmtH(x)+'–'+fmtH(y)).join(' ');
+    const tags = (d.flagInt?`<span class="tag ${d.flagInt}">intervalo</span>`:'') + (d.flagJorn?'<span class="tag warn">+10h</span>':'') + (d.flagInter?'<span class="tag warn">interjornada</span>':'');
+    const extra = d.off ? d.folga : d.he;
+    t += `<tr class="${d.off?'off':''}"><td>${d.date} ${d.wd}</td><td>${mk || (d.feriado?'Feriado':d.rest?'Descanso':'—')}${tags}</td><td class="n">${d.marks.length?fmtH(d.worked):''}</td><td class="n">${extra?fmtH(extra):''}</td><td class="n">${d.marks.length>1?d.interval+' min':d.marks.length?'0 min':''}</td></tr>`;
+  }
+  $('days').innerHTML = t + '</tbody>';
+}
+function renderWho(){
+  const w = [];
+  if (nomeAtual()) w.push(`<span class="pill">${esc(nomeAtual())}</span>`);
+  if (hol){ w.push(`<span class="pill">${esc(hol.cargo||'Holerite')}</span>`);
+    if (ponto && ponto.nome && hol.nome && ponto.nome.toUpperCase()!==hol.nome.toUpperCase()) w.push('<span class="pill crit">Nome do ponto e do holerite são diferentes</span>');
+    if (ponto && ponto.payMonth && hol.periodo[0]){ const mh = +hol.periodo[0].split('/')[1]; if (mh!==ponto.payMonth) w.push('<span class="pill warn">Mês do holerite diferente do ponto</span>'); } }
+  $('who').innerHTML = w.join('');
+}
+
+// ---- eventos
+async function onPonto(file){
+  $('stPonto').textContent = 'Lendo…';
+  try {
+    const pages = await readPdf(file);
+    if (!pages.flat().some(i=>i.s && i.s.trim())) throw new Error('Este PDF não tem texto (parece foto ou digitalização). Peça o PDF gerado pelo sistema de ponto.');
+    pontoPages = pages;
+    const r = lerPontoComModelo();
+    if (!r || !r.days.length) throw new Error('Não encontrei as linhas de dias (datas). Confira se é o relatório de ponto.');
+    ponto = r; if (r.nome) $('nome').value = r.nome;
+    const saved = (store.get().sal||{})[r.nome];
+    if (saved && !hol) { $('salario').value = nb(saved.salario); $('reaj').value = saved.reaj||0; $('salOrig').textContent='Último salário usado para este funcionário'; }
+    aplicarPonto();
+    $('stPonto').textContent = `${file.name} · ${r.days.length} dias lidos · ${r.modelo && r.modelo.tipo==='generico' ? 'modelo genérico' : 'modelo reconhecido'}`;
+  } catch(e){ $('stPonto').textContent = 'Erro: ' + e.message; }
+  renderWho(); render();
+}
+async function onHol(file){
+  $('stHol').textContent = 'Lendo…';
+  try {
+    const pages = await readPdf(file);
+    if (!pages.flat().some(i=>i.s && i.s.trim())) throw new Error('Este PDF não tem texto (parece foto ou digitalização).');
+    holPage = pages[0];
+    const r = lerHolerite(holPage, store.get().verbas || {});
+    if (!r || !r.linhas.length) throw new Error('Não reconheci as verbas deste holerite. Digite o salário à mão.');
+    hol = r; if (r.nome && !$('nome').value.trim()) $('nome').value = r.nome; aplicarHolerite();
+    $('stHol').textContent = `${file.name} · ${r.linhas.length} verbas lidas · ${r.modelo && r.modelo.tipo==='generico' ? 'modelo genérico' : 'modelo reconhecido'}`;
+  } catch(e){ $('stHol').textContent = 'Erro: ' + e.message; }
+  renderWho(); render();
+}
+$('filePonto').addEventListener('change', e => e.target.files[0] && onPonto(e.target.files[0]));
+$('fileHol').addEventListener('change', e => e.target.files[0] && onHol(e.target.files[0]));
+for (const [d,fn] of [['dropPonto',onPonto],['dropHol',onHol]]){
+  const el=$(d);
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('over');});
+  el.addEventListener('dragleave',()=>el.classList.remove('over'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('over');const f=e.dataTransfer.files[0]; if(f) fn(f);});
+}
+$('mes').addEventListener('change',()=>{aplicarMes();render();});
+document.querySelectorAll('input:not([type=file]):not(#mes)').forEach(i=>i.addEventListener('input',render));
+$('btnNovo').addEventListener('click',()=>{
+  ponto=null; hol=null; holSalario=null; pontoPages=null; holPage=null;
+  ['filePonto','fileHol'].forEach(id=>$(id).value='');
+  $('stPonto').textContent='Nenhum ponto'; $('stHol').textContent='Nenhum holerite';
+  ['he1','he2','folga','night','faltas'].forEach(id=>$(id).value='00:00');
+  ['adiant','outProv','outDesc'].forEach(id=>$(id).value='0,00'); $('reaj').value='0'; $('nome').value=''; $('stSave').textContent=''; $('salOrig').textContent='Digite o salário ou anexe o holerite';
+  renderWho(); render();
+});
+
+// ---- leitura com modelos guardados
+function liquidoPago(){ return hol.liquido != null ? hol.liquido : hol.linhas.filter(l=>l.tipo!=='ignorar').reduce((a,l)=>a+(l.d?-l.v:l.v),0); }
+function lerPontoComModelo(){
+  const s = store.get(); const modelos = s.modelosPonto || {};
+  let r = lerPonto(pontoPages, {});
+  if (r && r.modelo && r.modelo.tipo === 'generico' && modelos[r.modelo.assinatura]) r = parsePontoGenerico(pontoPages, modelos[r.modelo.assinatura]);
+  if (r && r.modelo && r.modelo.tipo === 'generico'){ r.modelo.salvo = !!modelos[r.modelo.assinatura]; }
+  return r;
+}
+function salvarModeloPonto(alter){
+  const s = store.get(); s.modelosPonto = s.modelosPonto || {};
+  const m = ponto.modelo; const atual = s.modelosPonto[m.assinatura] || { colunas: {}, jornadaSemana: m.jornadaSemana, jornadaSabado: m.jornadaSabado };
+  Object.assign(atual, alter); if (alter.colunas) atual.colunas = Object.assign({}, atual.colunas, alter.colunas);
+  s.modelosPonto[m.assinatura] = atual; store.set(s);
+  const nome = $('nome').value;
+  ponto = parsePontoGenerico(pontoPages, atual); if (!ponto.nome) ponto.nome = nome;
+  aplicarPonto(); renderWho(); render();
+}
+const TIPOS_COL = { marca:'Marcação (entrada/saída)', escala:'Horário previsto', total:'Total (ignorar)', ignorar:'Ignorar' };
+function renderModelo(){
+  // ponto
+  let hp = '';
+  if (!ponto) hp = '<p class="empty">Anexe um ponto para ver como ele foi lido.</p>';
+  else if (!ponto.modelo || ponto.modelo.tipo !== 'generico') hp = `<h3 style="font:600 14.5px var(--f-body);margin:0 0 4px">Ponto</h3><p class="empty">Modelo reconhecido (relatório DIMEP/Kairos ou compatível). As marcações e os totais foram lidos direto do relatório${pontoPages?'. <button class="btn sm" type="button" id="btnForcar">Ler pelo modo genérico</button>':''}</p>`;
+  else {
+    const m = ponto.modelo;
+    hp = `<h3 style="font:600 14.5px var(--f-body);margin:0 0 4px">Ponto · modelo genérico ${m.salvo?'<span class="pill ok">ajuste guardado</span>':''}</h3>
+      <p class="empty" style="margin-bottom:8px">Colunas de horário encontradas. Marque quais são as batidas de entrada e saída.</p>
+      <div class="scroll"><table class="map"><thead><tr><th>Coluna</th><th>Título</th><th>Exemplos</th><th>É</th></tr></thead><tbody>` +
+      m.colunas.map(c=>`<tr><td class="n">${c.idx+1}</td><td>${esc(c.titulo||'—')}</td><td class="n">${c.exemplos.map(esc).join(' ')}</td><td><select data-col="${c.idx}" aria-label="Tipo da coluna ${c.idx+1}">${Object.entries(TIPOS_COL).map(([k,v])=>`<option value="${k}"${c.tipo===k?' selected':''}>${v}</option>`).join('')}</select></td></tr>`).join('') +
+      `</tbody></table></div>
+      <div class="fields" style="margin-top:10px"><div class="f"><label for="jSem">Jornada seg a sex</label><input id="jSem" value="${fmtH(m.jornadaSemana)}"><small>Usada se o PDF não tem horário previsto</small></div>
+      <div class="f"><label for="jSab">Jornada sábado</label><input id="jSab" value="${fmtH(m.jornadaSabado)}"><small>00:00 = sábado é folga</small></div></div>`;
+  }
+  $('modPonto').innerHTML = hp;
+  // holerite
+  let hh = '';
+  if (!hol) hh = '<p class="empty">Anexe um holerite para ver as verbas lidas.</p>';
+  else {
+    hh = `<h3 style="font:600 14.5px var(--f-body);margin:0 0 4px">Holerite · ${hol.modelo && hol.modelo.tipo==='generico'?'modelo genérico':'modelo reconhecido'}</h3>
+      <p class="empty" style="margin-bottom:8px">Confira o que cada verba é. Se mudar, a página lembra para os próximos holerites.</p>
+      <div class="scroll"><table class="map"><thead><tr><th>Verba</th><th class="n">Ref.</th><th class="n">Valor</th><th>É</th></tr></thead><tbody>` +
+      hol.linhas.map((l,k)=>`<tr><td>${esc((l.cod?l.cod+' ':'')+l.desc)}</td><td class="n">${esc(l.ref)}</td><td class="n ${l.d?'desc':''}">${l.d?'−':''}${nb(l.v)}</td><td><select data-verba="${k}" aria-label="Tipo da verba ${esc(l.desc)}">${Object.entries(TIPOS_VERBA).map(([t,v])=>`<option value="${t}"${l.tipo===t?' selected':''}>${v}</option>`).join('')}</select></td></tr>`).join('') +
+      `</tbody></table></div><p class="note">Salário lido: ${hol.salarioMensal?brl(hol.salarioMensal):'não encontrado (digite no campo Salário)'} · Líquido lido: ${hol.liquido!=null?brl(hol.liquido):'não encontrado (somei as verbas)'}</p>`;
+  }
+  $('modHol').innerHTML = hh;
+}
+$('modPonto').addEventListener('change', e => {
+  const s = e.target.closest('select[data-col]'); if (s) salvarModeloPonto({ colunas: { [s.dataset.col]: s.value } });
+});
+$('modPonto').addEventListener('input', e => {
+  if (e.target.id === 'jSem' || e.target.id === 'jSab') { const v = pmin(e.target.value); if (/^\d{1,2}:\d{2}$/.test(e.target.value.trim())) { clearTimeout(window._jt); window._jt = setTimeout(()=>salvarModeloPonto(e.target.id==='jSem'?{jornadaSemana:v}:{jornadaSabado:v}), 500); } }
+});
+$('modPonto').addEventListener('click', e => {
+  if (e.target.id === 'btnForcar' && pontoPages){ const nome=$('nome').value; ponto = parsePontoGenerico(pontoPages, (store.get().modelosPonto||{})[ (parsePontoGenerico(pontoPages,{})||{modelo:{}}).modelo.assinatura ] || {}); if(!ponto.nome) ponto.nome=nome; aplicarPonto(); render(); }
+});
+$('modHol').addEventListener('change', e => {
+  const s = e.target.closest('select[data-verba]'); if (!s) return;
+  const l = hol.linhas[+s.dataset.verba]; const k = l.desc.toUpperCase().replace(/\s+/g,' ').trim();
+  const st = store.get(); st.verbas = st.verbas || {}; st.verbas[k] = s.value; store.set(st);
+  l.tipo = s.value; finalizarHolerite(hol, st.verbas); aplicarHolerite(); render();
+});
+
+// ---- análise detalhada
+let analiseTexto = '';
+function renderAnalise(p, f){
+  const H = []; const T = []; // html e texto
+  const sec = (titulo, tag, itens) => { if (!itens.length) return; H.push(`<div><h3>${titulo}${tag?` <small>${tag}</small>`:''}</h3><ul>${itens.map(i=>`<li>${i.sev?`<span class="sev ${i.sev}"></span>`:''}${i.h}${i.c?`<span class="calc">${esc(i.c)}</span>`:''}</li>`).join('')}</ul></div>`); T.push('\n'+titulo.toUpperCase()); itens.forEach(i=>T.push('- '+i.h.replace(/<[^>]+>/g,'')+(i.c?' ['+i.c+']':''))); };
+  const nome = nomeAtual() || 'Funcionário (exemplo)';
+  const [yy,mm] = $('mes').value.split('-'); const per = `${mm}/${yy}`;
+  const fh = n => n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const liqPago = hol ? liquidoPago() : null; const dl = liqPago!=null ? f.liquido - liqPago : null;
+  // resumo
+  H.push(`<div><h3>Resumo · ${esc(nome)}${hol&&hol.cargo?' · '+esc(hol.cargo):''} <small>${per}</small></h3>
+    <div class="kpis"><div><span>Líquido calculado</span><b>${brl(f.liquido)}</b></div><div><span>Bruto</span><b>${brl(f.bruto)}</b></div><div><span>Descontos</span><b>${brl(f.desc)}</b></div>
+    ${liqPago!=null?`<div><span>Líquido no holerite</span><b>${brl(liqPago)}</b></div>`:''}<div><span>FGTS (empresa deposita)</span><b>${brl(f.fgts)}</b></div></div>
+    <p style="margin:10px 0 0">${liqPago==null?'Sem holerite anexado: o valor acima é a previsão do que o funcionário vai receber.':Math.abs(dl)<=0.05?'<b>O holerite está correto.</b> O líquido pago é igual ao calculado a partir do ponto.':dl>0?`<b>O holerite pagou ${brl(dl)} a menos</b> do que o ponto indica. Veja a conferência abaixo.`:`<b>O holerite pagou ${brl(-dl)} a mais</b> do que o calculado. Veja a conferência abaixo.`}</p></div>`);
+  T.push(`ANÁLISE DO HOLERITE · ${nome} · ${per}`, `Líquido calculado: ${brl(f.liquido)} | Bruto: ${brl(f.bruto)} | Descontos: ${brl(f.desc)} | FGTS: ${brl(f.fgts)}` + (liqPago!=null?` | Líquido no holerite: ${brl(liqPago)}`:''));
+  // como foi calculado
+  const it = [];
+  it.push({h:`Valor da hora: <b>${brl(f.hora)}</b>`, c:`${brl(p.salario)} ÷ ${p.divisor} horas`});
+  if (p.reaj) it.push({h:`Reajuste de ${String(p.reaj).replace('.',',')}% aplicado ao salário de ${brl(p.salarioBase)}: novo salário ${brl(p.salario)}.`});
+  for (const [pct,min] of Object.entries(p.heGroups)) it.push({h:`Hora extra ${pct}%: ${fmtH(min)} = <b>${brl(min/60*f.hora*(1+pct/100))}</b>`, c:`${fh(min/60)} h × ${brl(f.hora)} × ${fh(1+pct/100)}`});
+  if (p.folga) it.push({h:`Folga ou feriado trabalhado: ${fmtH(p.folga)} pagas com ${p.folgaPct}% = <b>${brl(p.folga/60*f.hora*(1+p.folgaPct/100))}</b>`, c:`${fh(p.folga/60)} h × ${brl(f.hora)} × ${fh(1+p.folgaPct/100)}`});
+  if (p.night) it.push({h:`Extra noturna: ${fmtH(p.night)} no relógio viram ${fmtH(p.night*60/52.5)} noturnas (hora de 52min30s), com ${p.nightPct}% de extra e ${p.adNot}% de adicional noturno = <b>${brl(p.night/60*(60/52.5)*f.hora*(1+p.nightPct/100)*(1+p.adNot/100))}</b>`, c:`${fh(p.night/60)} h × 60/52,5 × ${brl(f.hora)} × ${fh(1+p.nightPct/100)} × ${fh(1+p.adNot/100)}`});
+  const dsrL = f.linhas.find(l=>/Repouso/.test(l.desc));
+  if (dsrL){ const ext = f.linhas.filter(l=>/^Hora Extra|^Folga|Noturna/.test(l.desc)).reduce((a,l)=>a+l.v,0); it.push({h:`DSR sobre as extras: <b>${brl(dsrL.v)}</b>. As extras também pagam o descanso semanal.`, c:`${brl(ext)} ÷ ${p.uteis} dias úteis × ${p.dsrDias} domingos/feriados`}); }
+  if (p.faltasMin) it.push({h:`Desconto de faltas e atrasos: ${fmtH(p.faltasMin)} = ${brl(p.faltasMin/60*f.hora)}`, c:`${fh(p.faltasMin/60)} h × ${brl(f.hora)}`});
+  const det = inssDetalhe(f.bruto, p.T);
+  it.push({h:`INSS: <b>${brl(f.inss)}</b> (${fh(f.bruto?f.inss/f.bruto*100:0)}% do bruto), calculado faixa por faixa.`, c: det.map(d=>`${brl(d.ate-d.de)} × ${fh(d.aliq*100)}% = ${brl(d.valor)}`).join(' + ')});
+  const ir = f.ir;
+  it.push({h:`IRRF: <b>${brl(ir.valor)}</b>. Base ${brl(ir.base)} (bruto menos ${ir.simplificado?'o desconto simplificado de '+brl(p.T.irDescontoSimplificado):'INSS e dependentes'}). Pela tabela daria ${brl(ir.bruto)}; a redução de 2026 tira ${brl(ir.redutor)}.`, c: ir.bruto?`${brl(ir.base)} × ${fh(ir.aliq*100)}% − parcela a deduzir − redutor`:''});
+  if (p.vtPct) it.push({h:`Vale-transporte: ${String(p.vtPct).replace('.',',')}% do salário = ${brl(Math.min(p.salario*p.vtPct/100))}.`});
+  if (p.adiant) it.push({h:`Adiantamento já recebido no mês: ${brl(p.adiant)} (descontado do líquido).`});
+  it.push({h:`FGTS: ${brl(f.fgts)} (8% do bruto). Não sai do salário; a empresa deposita. Confira no app FGTS.`});
+  sec('Como cada valor foi calculado', `tabelas ${p.T.ano}`, it);
+  // ponto
+  if (ponto && ponto.days.length){
+    const ds = ponto.days, trab = ds.filter(d=>d.marks.length), tot = trab.reduce((a,d)=>a+d.worked,0);
+    const fol = trab.filter(d=>d.off), tarde = ds.filter(d=>!d.off && d.marks.length && d.deficit>0), notur = trab.filter(d=>d.night>0);
+    const ip = [];
+    ip.push({h:`Período do ponto: ${ds[0].date} a ${ds[ds.length-1].date}. ${trab.length} dias com marcação, ${fmtH(tot)} trabalhadas no total.`});
+    ip.push({h:`Horas extras em dia útil: ${fmtH(ponto.computed.he)}${ponto.computed.night?`, mais ${fmtH(ponto.computed.night)} depois das 22h`:''}.`});
+    if (fol.length) ip.push({h:`Trabalho em folga ou feriado: ${fol.map(d=>`${d.date} (${d.wd}, ${fmtH(d.worked)})`).join(', ')}.`});
+    if (notur.length) ip.push({h:`Horas noturnas em: ${notur.map(d=>`${d.date} (${fmtH(d.night)})`).join(', ')}.`});
+    if (tarde.length) ip.push({h:`Dias com menos horas que a jornada: ${tarde.length} (${fmtH(tarde.reduce((a,d)=>a+d.deficit,0))} no total). ${p.faltasMin?`Foram descontadas ${fmtH(p.faltasMin)}.`:'Nada foi descontado.'}`});
+    const faltou = ds.filter(d=>!d.off && !d.marks.length && d.sched);
+    if (faltou.length) ip.push({sev:'warn', h:`Dias úteis sem nenhuma marcação: ${faltou.map(d=>d.date).join(', ')}. Pode ser falta, atestado ou folga não registrada.`});
+    sec('O que o ponto mostra', ponto.modelo && ponto.modelo.tipo==='generico'?'leitura genérica':'', ip);
+    // atenção
+    const a = auditoria(ponto.days, f.hora); const at = [];
+    if (a.suprMin>0) at.push({sev:'crit', h:`<b>Intervalo de almoço abaixo do mínimo</b> em ${a.intCrit+a.intWarn} dias (${a.intCrit} com menos de 30 min). Para jornadas acima de 6h a CLT exige 1h (art. 71). O tempo que falta é pago com 50% a mais, como indenização. Estimativa: <b>${brl(a.suprValor)}</b>. Se a convenção coletiva permitir 30 min, conta só o que faltou para 30 min.`, c:`${fh(a.suprMin/60)} h × ${brl(f.hora)} × 1,50`});
+    if (a.semInt.length) at.push({sev:'crit', h:`<b>Trabalho sem nenhum intervalo</b>: ${a.semInt.map(d=>`${d.date} (${fmtH(d.worked)} seguidas)`).join(', ')}.`});
+    if (a.jorn.length) at.push({sev:'warn', h:`<b>Jornada acima de 10h</b> em ${a.jorn.map(d=>`${d.date} (${fmtH(d.worked)})`).join(', ')}. O limite é 8h + 2h extras por dia (art. 59). As horas foram pagas, mas a prática é irregular.`});
+    if (a.inter.length){ const falt = a.inter.reduce((x,d)=>x+(660-d.flagInter),0); at.push({sev:'warn', h:`<b>Descanso entre jornadas menor que 11h</b>: ${a.inter.map(d=>`antes de ${d.date} (${fmtH(d.flagInter)})`).join(', ')}. O tempo que faltou (${fmtH(falt)}) deve ser pago como hora extra (art. 66 e OJ 355 do TST).`, c:`${fh(falt/60)} h × ${brl(f.hora)} × ${fh(1+(+$('he1p').value||50)/100)} = ${brl(falt/60*f.hora*(1+(+$('he1p').value||50)/100))}`}); }
+    if (!at.length) at.push({sev:'ok', h:'Nenhum problema de intervalo, jornada ou descanso encontrado no ponto.'});
+    sec('Pontos de atenção', '', at);
+  }
+  // conferência
+  if (hol){
+    const cf = []; const pago = t => hol.linhas.filter(l=>l.tipo===t).reduce((a,l)=>a+l.v,0); const pagoH = t => hol.linhas.filter(l=>l.tipo===t&&l.min!=null).reduce((a,l)=>a+l.min,0);
+    const calc = re => f.linhas.filter(l=>re.test(l.desc)).reduce((a,l)=>a+l.v,0);
+    const chk = (nome, pg, cl, hp, hc) => { if (Math.abs(pg)<0.005 && Math.abs(cl)<0.005) return; const d = cl-pg;
+      const horas = hp!=null && (hp||hc) ? ` Horas: ${fmtH(hp)} pagas, ${fmtH(hc)} no ponto${hp!==hc?` (${hc>hp?'faltou pagar '+fmtH(hc-hp):'pagou '+fmtH(hp-hc)+' a mais'})`:''}.` : '';
+      cf.push(Math.abs(d)<=0.05 ? {sev:'ok', h:`${nome}: confere (${brl(pg)}).${horas}`} : {sev: d>0?'crit':'warn', h:`${nome}: pago ${brl(pg)}, calculado ${brl(cl)}. Diferença de <b>${brl(Math.abs(d))}</b> ${d>0?'a favor do funcionário':'a favor da empresa'}.${horas}`}); };
+    chk('Salário', pago('salario'), calc(/^Sal[áa]rio/));
+    chk('Horas extras', pago('he'), calc(/^Hora Extra/), pagoH('he'), Object.values(p.heGroups).reduce((a,b)=>a+b,0));
+    chk('Folga/feriado trabalhado', pago('folga'), calc(/^Folga/), pagoH('folga'), p.folga);
+    chk('Extra noturna', pago('night'), calc(/Noturna/), pagoH('night'), p.night);
+    chk('DSR', pago('dsr'), calc(/Repouso/));
+    chk('INSS', pago('inss'), f.inss); chk('IRRF', pago('irrf'), f.ir.valor);
+    if (hol.linhas.some(l=>l.tipo==='he'&&l.pct&&l.pct<100) && ponto && ponto.days.some(d=>d.off && d.worked)) cf.push({sev:'warn', h:'Há trabalho em folga/feriado no ponto. Esse tipo de hora costuma ser paga em dobro (100%) e não com 50%.'});
+    if (p.reaj) cf.push({sev:'warn', h:'Há um reajuste aplicado, então as diferenças acima incluem o efeito do reajuste. Zere o reajuste para conferir só o holerite.'});
+    sec('Conferência com o holerite', hol.modelo && hol.modelo.tipo==='generico'?'leitura genérica':'', cf);
+  }
+  // observações
+  const ob = [];
+  if (!p.T.exato) ob.push({sev:'warn', h:`Ainda não há tabela de ${p.T.pedido}; o cálculo usou a de ${p.T.ano}.`});
+  if (ponto && hol && ponto.nome && hol.nome && ponto.nome.toUpperCase()!==hol.nome.toUpperCase()) ob.push({sev:'crit', h:'O nome no ponto é diferente do nome no holerite. Confira se os arquivos são do mesmo funcionário.'});
+  if (ponto && hol && hol.periodo[0] && ponto.payMonth && +hol.periodo[0].split('/')[1] !== ponto.payMonth) ob.push({sev:'warn', h:'O mês do holerite é diferente do mês de fechamento do ponto.'});
+  if ((ponto && ponto.modelo && ponto.modelo.tipo==='generico') || (hol && hol.modelo && hol.modelo.tipo==='generico')) ob.push({h:'Algum arquivo foi lido pelo modo genérico. Confira na seção 5 se as colunas e verbas foram entendidas certo.'});
+  ob.push({h:'Os percentuais de hora extra, a jornada e o intervalo mínimo podem ser diferentes na convenção coletiva da categoria. Confirme com o RH ou o sindicato antes de cobrar valores. Esta análise não substitui um advogado trabalhista.'});
+  sec('Observações', '', ob);
+  $('ana').innerHTML = H.join('');
+  analiseTexto = T.join('\n');
+}
+$('btnCopiar').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(analiseTexto); $('stCopiar').textContent = 'Copiada.'; }
+  catch(e){ $('stCopiar').textContent = 'Não foi possível copiar aqui. Selecione o texto e copie.'; }
+});
+
+// ---- tabelas
+function renderTab(T){
+  const dt = T.verificadoEm.split('-').reverse().join('/');
+  $('tabSub').innerHTML = `Ano ${T.ano} · <span class="pill ok">Conferidas em ${dt}</span>`;
+  $('tabWarn').innerHTML = T.exato ? '' : `<div class="al warn" style="margin-bottom:12px"><b>Ainda não há tabela de ${T.pedido} aqui</b><p>O cálculo usa a de ${T.ano} até a verificação mensal publicar a nova.</p></div>`;
+  let prev = 0, ti = '<thead><tr><th>INSS: salário de contribuição</th><th class="n">Alíquota</th></tr></thead><tbody>';
+  for (const [lim,a] of T.inss){ ti += `<tr><td>${prev? 'De '+brl(prev+0.01)+' a ':'Até '}${brl(lim)}</td><td class="n">${(a*100).toLocaleString('pt-BR')}%</td></tr>`; prev = lim; }
+  $('tabInss').innerHTML = ti + '</tbody>';
+  prev = 0; let tr = '<thead><tr><th>IR: base de cálculo</th><th class="n">Alíquota</th><th class="n">Deduzir</th></tr></thead><tbody>';
+  for (const [lim,a,d] of T.ir){ tr += `<tr><td>${lim==null?'Acima de '+brl(prev):(prev?'De '+brl(prev+0.01)+' a ':'Até ')+brl(lim)}</td><td class="n">${a?(a*100).toLocaleString('pt-BR')+'%':'isento'}</td><td class="n">${d?nb(d):'—'}</td></tr>`; if(lim) prev = lim; }
+  $('tabIr').innerHTML = tr + '</tbody>';
+  const R = T.irRedutor;
+  $('tabNote').textContent = (R ? `Redutor do IR: renda até ${brl(R.isentoAte)} fica isenta; até ${brl(R.faixaAte)} a redução é ${nb(R.a)} − ${String(R.b).replace('.',',')} × renda. ` : '')
+    + `Dependente: ${brl(T.irDependente)}. Desconto simplificado: ${brl(T.irDescontoSimplificado)}. ${T.fontes}`;
+}
+
+// ---- consultas salvas
+const CAMPOS = ['salario','reaj','divisor','dep','vt','adiant','outProv','outDesc','he1','he1p','he2','he2p','folga','folgap','night','nightp','adnot','faltas','mes','uteis','dsr'];
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const mesTxt = v => { const [y,m] = v.split('-'); return MESES[+m-1] + '/' + y; };
+const getHist = () => store.get().hist || {};
+const setHist = hs => { const s = store.get(); s.hist = hs; store.set(s); };
+let ultimo = null;
+function salvar(){
+  const nome = nomeAtual();
+  if (!nome){ $('stSave').textContent = 'Digite o nome do funcionário para salvar.'; $('nome').focus(); return; }
+  const mes = $('mes').value; const p = params(); const f = folha(p);
+  const campos = {}; CAMPOS.forEach(id => campos[id] = $(id).value);
+  const liqPago = hol ? liquidoPago() : null;
+  const a = ponto ? auditoria(ponto.days, f.hora) : null;
+  const rec = { nome, mes, cargo: hol ? hol.cargo : '', salvoEm: new Date().toISOString(), campos,
+    ponto: ponto ? { nome: ponto.nome, days: ponto.days.map(d=>({...d, flagInt:undefined, flagJorn:undefined, flagInter:undefined})), computed: ponto.computed, official: ponto.official, totals: ponto.totals, payMonth: ponto.payMonth, payYear: ponto.payYear } : null,
+    hol, liquido: f.liquido, bruto: f.venc, liqPago, intervalo: a ? a.suprValor : 0 };
+  const hs = getHist(); hs[nome + '|' + mes] = rec;
+  try { localStorage.setItem('calc-holerite-test','1'); localStorage.removeItem('calc-holerite-test'); setHist(hs); }
+  catch(e){ $('stSave').textContent = 'Este navegador não deixou salvar.'; return; }
+  if (!getHist()[nome + '|' + mes]) { $('stSave').textContent = 'Este navegador não deixou salvar.'; return; }
+  ultimo = nome + '|' + mes;
+  $('stSave').textContent = `Salvo: ${nome} · ${mesTxt(mes)}`;
+  renderHist();
+}
+function abrir(key){
+  const r = getHist()[key]; if (!r) return;
+  ponto = r.ponto; hol = r.hol; pontoPages = null; holPage = null;
+  CAMPOS.forEach(id => { if (r.campos[id] != null) $(id).value = r.campos[id]; });
+  $('nome').value = r.nome;
+  $('stPonto').textContent = ponto ? `Consulta salva · ${ponto.days.length} dias` : 'Nenhum ponto';
+  $('stHol').textContent = hol ? `Consulta salva · ${hol.linhas.length} verbas` : 'Nenhum holerite';
+  $('salOrig').textContent = 'Da consulta salva';
+  $('stSave').textContent = `Aberta: ${r.nome} · ${mesTxt(r.mes)}`;
+  ['filePonto','fileHol'].forEach(id=>$(id).value='');
+  renderWho(); render();
+  window.scrollTo({top:0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+}
+let confirmando = null;
+function renderHist(){
+  const hs = getHist(); const keys = Object.keys(hs);
+  const meses = [...new Set(keys.map(k=>hs[k].mes))].sort().reverse();
+  const sel = $('fMes'), atual = sel.value;
+  sel.innerHTML = '<option value="">Todos</option>' + meses.map(m=>`<option value="${m}">${mesTxt(m)}</option>`).join('');
+  if (meses.includes(atual)) sel.value = atual;
+  const q = $('fNome').value.trim().toUpperCase(), fm = sel.value;
+  const lista = keys.map(k=>({k, ...hs[k]})).filter(r => (!q || r.nome.includes(q)) && (!fm || r.mes === fm));
+  if (!keys.length){ $('hist').innerHTML = '<p class="empty">Nenhuma consulta salva ainda. Anexe os PDFs e toque em "Salvar consulta".</p>'; return; }
+  if (!lista.length){ $('hist').innerHTML = '<p class="empty">Nenhuma consulta com esse filtro.</p>'; return; }
+  const grupos = {}; lista.forEach(r => (grupos[r.nome] = grupos[r.nome] || []).push(r));
+  $('hist').innerHTML = Object.keys(grupos).sort().map(n => {
+    const rows = grupos[n].sort((a,b)=>b.mes.localeCompare(a.mes)).map(r => {
+      const dif = r.liqPago != null ? r.liquido - r.liqPago : null;
+      const pill = dif == null ? '<span class="pill">Sem holerite</span>' : Math.abs(dif) <= 0.05 ? '<span class="pill ok">Confere</span>'
+        : `<span class="pill ${dif>0?'crit':'warn'}">${dif>0?'Pago a menos ':'Pago a mais '}${brl(Math.abs(dif))}</span>`;
+      const intv = r.intervalo > 0.5 ? `<span class="pill crit">Intervalo ${brl(r.intervalo)}</span>` : '';
+      const conf = confirmando === r.k;
+      return `<div class="hrow"><span class="m">${mesTxt(r.mes)}</span><div class="info"><span class="v">${brl(r.liquido)}</span>${pill}${intv}</div>
+        <div class="acts"><button class="btn sm" type="button" data-abrir="${esc(r.k)}">Abrir</button>
+        <button class="btn sm danger" type="button" data-excluir="${esc(r.k)}">${conf?'Confirmar exclusão':'Excluir'}</button></div></div>`;
+    }).join('');
+    return `<div class="hgroup"><h3>${esc(n)}</h3>${rows}</div>`;
+  }).join('');
+}
+$('btnSalvar').addEventListener('click', salvar);
+$('fNome').addEventListener('input', renderHist);
+$('fMes').addEventListener('change', renderHist);
+$('nome').addEventListener('input', () => { renderWho(); render(); });
+$('hist').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.abrir) { confirmando = null; abrir(b.dataset.abrir); renderHist(); }
+  if (b.dataset.excluir) {
+    const k = b.dataset.excluir;
+    if (confirmando === k) { const hs = getHist(); delete hs[k]; setHist(hs); confirmando = null; }
+    else confirmando = k;
+    renderHist();
+  }
+});
+
+// estado inicial: exemplo
+ponto = parsePonto(exemploStrings()); ponto.nome=''; ponto.modelo={tipo:'conhecido'};
+aplicarPonto(); renderWho(); render(); renderHist();
+})();
+</script>
+<script>
+(function(){
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+  var standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (standalone) return;
+  var box = document.getElementById('instalar'), btn = document.getElementById('btnInstalar'), txt = document.getElementById('instTxt'), evt = null;
+  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); evt = e; box.hidden = false; });
+  btn.addEventListener('click', function(){ if (!evt) return; evt.prompt(); evt.userChoice.finally(function(){ evt = null; box.hidden = true; }); });
+  window.addEventListener('appinstalled', function(){ box.hidden = true; });
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (ios) { box.hidden = false; btn.hidden = true; txt.textContent = 'No Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início".'; }
+})();
+</script>
+</body>
+</html>
